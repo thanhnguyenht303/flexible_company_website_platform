@@ -1,0 +1,11 @@
+.git
+.next
+node_modules
+coverage
+backups
+certbot
+public/uploads/*
+!public/uploads/.gitkeep
+.env
+.env.*
+*.log

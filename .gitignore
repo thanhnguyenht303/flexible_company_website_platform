@@ -4,6 +4,7 @@
 /node_modules
 /.pnp
 .pnp.js
+.pnpm-store/
 
 # testing
 /coverage
@@ -23,10 +24,15 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+*.log
 
 # local env files
 .env*.local
 .env
+.env.production
+.env.development
+!.env.example
 
 # vercel
 .vercel
@@ -34,3 +40,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated and local runtime data
+/public/uploads/*
+!/public/uploads/.gitkeep
+/backups/
+/certbot/
+/docker/certbot/
+
+# OS/editor
+.idea/
+.vscode/
+Thumbs.db

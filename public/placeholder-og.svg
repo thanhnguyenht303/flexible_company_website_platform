@@ -1,0 +1,11 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#F8FAFC"/>
+  <rect x="80" y="76" width="1040" height="478" rx="18" fill="white" stroke="#D8DEE9" stroke-width="2"/>
+  <rect x="140" y="136" width="92" height="92" rx="18" fill="#2563EB"/>
+  <path d="M164 166h44v10h-32v16h27v10h-27v20h-12v-56Z" fill="white"/>
+  <rect x="194" y="202" width="22" height="20" fill="#F97316"/>
+  <text x="140" y="300" fill="#111827" font-family="Arial, sans-serif" font-size="54" font-weight="700">Flexible Company Website</text>
+  <text x="140" y="365" fill="#64748B" font-family="Arial, sans-serif" font-size="30">Admin-managed public pages, theme, content, media, SEO, and inquiries.</text>
+  <rect x="140" y="430" width="220" height="56" rx="8" fill="#2563EB"/>
+  <text x="182" y="467" fill="white" font-family="Arial, sans-serif" font-size="22" font-weight="700">Ready to Deploy</text>
+</svg>

@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum InquiryStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  SPAM
+}
+
+model User {
+  id           String       @id @default(cuid())
+  username     String       @unique
+  email        String?      @unique
+  passwordHash String
+  displayName  String?
+  status       UserStatus   @default(ACTIVE)
+  roleId       String
+  role         Role         @relation(fields: [roleId], references: [id])
+  lastLoginAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  mediaUploads MediaAsset[]
+  auditLogs    AuditLog[]
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions Json
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteSetting {
+  id          String   @id @default(cuid())
+  siteName    String   @default("Demo Company")
+  domain      String?
+  tagline     String?
+  description String?
+  logoId      String?
+  faviconId   String?
+  email       String?
+  phone       String?
+  address     String?
+  mapEmbedUrl String?
+  socialLinks Json?
+  defaultSeo  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ThemeSetting {
+  id              String   @id @default(cuid())
+  primaryColor    String   @default("#2563EB")
+  secondaryColor  String   @default("#1E293B")
+  accentColor     String   @default("#F97316")
+  backgroundColor String   @default("#FFFFFF")
+  textColor       String   @default("#111827")
+  fontFamily      String   @default("Inter")
+  borderRadius    String   @default("medium")
+  headerLayout    String   @default("classic")
+  footerLayout    String   @default("standard")
+  customCss       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Page {
+  id             String        @id @default(cuid())
+  title          String
+  slug           String        @unique
+  status         PublishStatus @default(DRAFT)
+  template       String        @default("default")
+  seoTitle       String?
+  seoDescription String?
+  seoImageId     String?
+  sections       PageSection[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model PageSection {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type      String
+  title     String?
+  subtitle  String?
+  enabled   Boolean  @default(true)
+  sortOrder Int      @default(0)
+  settings  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  type        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Product {
+  id             String        @id @default(cuid())
+  name           String
+  slug           String        @unique
+  summary        String?
+  description    String?
+  categoryId     String?
+  imageId        String?
+  gallery        Json?
+  specs          Json?
+  status         PublishStatus @default(DRAFT)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Service {
+  id             String        @id @default(cuid())
+  name           String
+  slug           String        @unique
+  summary        String?
+  description    String?
+  categoryId     String?
+  imageId        String?
+  status         PublishStatus @default(DRAFT)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Post {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  excerpt         String?
+  content         String
+  categoryId      String?
+  tagNames        String[]
+  featuredImageId String?
+  status          PublishStatus @default(DRAFT)
+  publishedAt     DateTime?
+  seoTitle        String?
+  seoDescription  String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  name        String
+  position    String?
+  bio         String?
+  photoId     String?
+  email       String?
+  phone       String?
+  socialLinks Json?
+  sortOrder   Int      @default(0)
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MediaAsset {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  url          String
+  altText      String?
+  title        String?
+  description  String?
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model Inquiry {
+  id           String        @id @default(cuid())
+  name         String
+  email        String
+  phone        String?
+  companyName  String?
+  message      String
+  sourceType   String        @default("contact")
+  sourceId     String?
+  status       InquiryStatus @default(NEW)
+  internalNote String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  targetType String
+  targetId   String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+}
