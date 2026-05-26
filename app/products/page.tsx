@@ -18,6 +18,12 @@ export default async function ProductsPage() {
           <div className="grid">
             {products.map((product) => (
               <Link className="card" href={`/products/${product.slug}`} key={product.slug}>
+                {"imageId" in product && product.imageId ? (
+                  <div className="card-media">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/media/${product.imageId}`} alt="" />
+                  </div>
+                ) : null}
                 <h3>{product.name}</h3>
                 <p>{product.summary}</p>
               </Link>

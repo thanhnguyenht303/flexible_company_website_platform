@@ -20,10 +20,13 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      IMAGE_STORAGE_ROOT: /app/Images
     depends_on:
       - postgres
     volumes:
       - ./public/uploads:/app/public/uploads
+      - ../Images:/app/Images
     ports:
       - "3000:3000"
 

@@ -25,6 +25,7 @@ pnpm dev
 - `APP_SECRET` must be at least 32 characters.
 - `DATABASE_URL` should point to PostgreSQL.
 - `ALLOW_ADMIN_BOOTSTRAP=true` is only for initial admin creation.
+- `SESSION_EXPIRES_HOURS=24` keeps admin login sessions valid for 24 hours.
 - Real `.env` files are ignored and must not be committed.
 
 ## First Admin

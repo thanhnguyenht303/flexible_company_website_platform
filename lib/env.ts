@@ -16,7 +16,8 @@ const envSchema = z.object({
     .string()
     .default("image/jpeg,image/png,image/webp,image/svg+xml,application/pdf"),
   SESSION_COOKIE_NAME: z.string().default("cw_session"),
-  SESSION_EXPIRES_DAYS: z.coerce.number().positive().default(7),
+  SESSION_EXPIRES_HOURS: z.coerce.number().positive().default(24),
+  SESSION_EXPIRES_DAYS: z.coerce.number().positive().optional(),
   PASSWORD_MIN_LENGTH: z.coerce.number().min(10).default(10),
   RATE_LIMIT_LOGIN_PER_MINUTE: z.coerce.number().positive().default(5)
 });

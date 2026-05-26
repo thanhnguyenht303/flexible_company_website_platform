@@ -10,6 +10,7 @@ A reusable Next.js, TypeScript, Prisma, PostgreSQL, and Docker Compose platform 
 - First-admin bootstrap script with bcrypt password hashing.
 - Docker Compose stack for PostgreSQL, the Next.js app, and Nginx.
 - `.env.example`, `.gitignore`, backup/restore scripts, and developer docs.
+- External image library rooted at `../Images` locally, with folders for posts, products, services, team, logos, and general assets. Docker maps that folder to `/app/Images`.
 
 ## Local Setup
 
@@ -29,6 +30,8 @@ Open:
 - Admin login: http://localhost:3000/admin/login
 
 After creating the first admin, set `ALLOW_ADMIN_BOOTSTRAP=false` in production.
+
+Admin login sessions expire after 24 hours by default through `SESSION_EXPIRES_HOURS=24`.
 
 ## Interactive Setup
 
@@ -54,6 +57,7 @@ Set DNS to the server IP, update `NEXT_PUBLIC_SITE_URL`, and update `docker/ngin
 ## Project Structure
 
 ```text
+../Images/           External local image library for uploaded media
 app/                 Next.js App Router pages and API route handlers
 components/          Public, admin, and shared UI components
 config/              Default site, theme, and enabled module config
@@ -82,5 +86,6 @@ pnpm backup:db
 
 - [Setup](docs/setup.md)
 - [Deployment](docs/deployment.md)
+- [Image Storage](docs/image-storage.md)
 - [Module Development](docs/module-development.md)
 - [API](docs/api.md)

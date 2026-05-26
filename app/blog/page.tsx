@@ -18,6 +18,12 @@ export default async function BlogPage() {
           <div className="grid">
             {posts.map((post) => (
               <Link className="card" href={`/blog/${post.slug}`} key={post.slug}>
+                {"featuredImageId" in post && post.featuredImageId ? (
+                  <div className="card-media">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/media/${post.featuredImageId}`} alt="" />
+                  </div>
+                ) : null}
                 <h3>{post.title}</h3>
                 <p>{post.excerpt}</p>
               </Link>

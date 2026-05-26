@@ -63,6 +63,12 @@ export default async function HomePage() {
           <div className="grid">
             {products.slice(0, 3).map((product) => (
               <Link className="card" href={`/products/${product.slug}`} key={product.slug}>
+                {"imageId" in product && product.imageId ? (
+                  <div className="card-media">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/media/${product.imageId}`} alt="" />
+                  </div>
+                ) : null}
                 <h3>{product.name}</h3>
                 <p>{product.summary}</p>
               </Link>
@@ -99,6 +105,12 @@ export default async function HomePage() {
           <div className="grid">
             {posts.slice(0, 3).map((post) => (
               <Link className="card" href={`/blog/${post.slug}`} key={post.slug}>
+                {"featuredImageId" in post && post.featuredImageId ? (
+                  <div className="card-media">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/media/${post.featuredImageId}`} alt="" />
+                  </div>
+                ) : null}
                 <h3>{post.title}</h3>
                 <p>{post.excerpt}</p>
               </Link>

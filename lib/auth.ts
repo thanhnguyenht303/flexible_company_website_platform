@@ -53,7 +53,8 @@ function parseSession(value: string | undefined): SessionPayload | null {
 }
 
 export async function createAdminSession(userId: string) {
-  const expiresAt = Date.now() + env.SESSION_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
+  const sessionHours = env.SESSION_EXPIRES_HOURS ?? (env.SESSION_EXPIRES_DAYS ?? 1) * 24;
+  const expiresAt = Date.now() + sessionHours * 60 * 60 * 1000;
   cookies().set(env.SESSION_COOKIE_NAME, serializeSession({ userId, expiresAt }), {
     httpOnly: true,
     sameSite: "lax",

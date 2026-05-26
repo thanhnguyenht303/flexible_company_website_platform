@@ -17,6 +17,12 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
               <p>{post.excerpt}</p>
             </div>
           </div>
+          {"featuredImageId" in post && post.featuredImageId ? (
+            <div className="post-hero-image">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/media/${post.featuredImageId}`} alt="" />
+            </div>
+          ) : null}
           <div className="card">
             <p>{post.content}</p>
           </div>
