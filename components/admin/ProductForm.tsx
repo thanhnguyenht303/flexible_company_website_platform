@@ -138,7 +138,7 @@ export function ProductForm({ product, images = [] }: ProductFormProps) {
           id="images"
           name="images"
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/svg+xml"
+          accept="image/jpeg,image/png,image/webp"
           multiple
         />
         <p className="field-help">Upload one or more product images. The first saved image becomes the product thumbnail.</p>

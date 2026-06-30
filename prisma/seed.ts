@@ -1,5 +1,6 @@
 import { PrismaClient, PublishStatus } from "@prisma/client";
 import { defaultHomeSections, defaultPosts, defaultProducts, defaultServices, defaultSite, defaultTeam } from "../config/default-site";
+import { publicPages } from "../config/public-pages";
 import { defaultTheme } from "../config/default-theme";
 import { superAdminPermissions } from "../lib/permissions";
 
@@ -27,6 +28,8 @@ async function main() {
         "services.manage": true,
         "posts.manage": true,
         "team.manage": true,
+        "footer.manage": true,
+        "careers.manage": true,
         "media.manage": true,
         "inquiries.manage": true
       }
@@ -69,6 +72,18 @@ async function main() {
         sortOrder: section.sortOrder,
         settings: section.settings
       }))
+    });
+  }
+
+  for (const page of publicPages) {
+    await prisma.page.upsert({
+      where: { slug: page.slug },
+      update: {},
+      create: {
+        title: page.title,
+        slug: page.slug,
+        status: PublishStatus.PUBLISHED
+      }
     });
   }
 

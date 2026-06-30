@@ -1,7 +1,11 @@
+import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
+import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
 export default async function AboutPage() {
+  if (!(await isPublicPageVisible("about"))) notFound();
+
   const { site } = await getPublicSiteContext();
 
   return (

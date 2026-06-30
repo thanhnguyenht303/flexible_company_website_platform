@@ -5,8 +5,9 @@ import { resolveImagePath } from "@/lib/image-storage";
 
 export const runtime = "nodejs";
 
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
-  const asset = await prisma.mediaAsset.findUnique({ where: { id: params.id } });
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const asset = await prisma.mediaAsset.findUnique({ where: { id } });
 
   if (!asset) {
     return new NextResponse("Media not found.", { status: 404 });
@@ -17,6 +18,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     return new NextResponse(bytes, {
       headers: {
         "Content-Type": asset.mimeType,
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=31536000, immutable"
       }
     });

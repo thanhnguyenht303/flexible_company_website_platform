@@ -34,7 +34,7 @@ export function LoginForm() {
     <div className="login-panel">
       <Image src="/placeholder-logo.svg" alt="" width={44} height={44} />
       <h1>Admin Login</h1>
-      <form className="form-grid" onSubmit={onSubmit}>
+      <form className="form-grid" method="post" onSubmit={onSubmit}>
         <div className="field">
           <label htmlFor="username">Username</label>
           <input id="username" name="username" autoComplete="username" required minLength={3} />

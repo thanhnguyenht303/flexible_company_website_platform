@@ -13,55 +13,126 @@ import { prisma } from "@/lib/db";
 
 export type PublicSiteContext = Awaited<ReturnType<typeof getPublicSiteContext>>;
 
-export async function getPublicSiteContext() {
-  try {
-    const [site, theme, homePage, services, products, posts, team] = await Promise.all([
-      prisma.siteSetting.findFirst(),
-      prisma.themeSetting.findFirst(),
-      prisma.page.findUnique({
-        where: { slug: "home" },
-        include: { sections: { orderBy: { sortOrder: "asc" } } }
-      }),
-      prisma.service.findMany({
-        where: { status: PublishStatus.PUBLISHED },
-        orderBy: { createdAt: "desc" },
-        take: 12
-      }),
-      prisma.product.findMany({
-        where: { status: PublishStatus.PUBLISHED },
-        orderBy: { createdAt: "desc" },
-        take: 12
-      }),
-      prisma.post.findMany({
-        where: { status: PublishStatus.PUBLISHED },
-        orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-        take: 12
-      }),
-      prisma.teamMember.findMany({
-        where: { isVisible: true },
-        orderBy: { sortOrder: "asc" }
-      })
-    ]);
+const publicDataWarningLabels = new Set<string>();
 
-    return {
-      site: { ...defaultSite, ...site },
-      theme: { ...defaultTheme, ...theme },
-      sections: homePage?.sections?.length ? homePage.sections : defaultHomeSections,
-      services: services.length ? services : defaultServices,
-      products: products.length ? products : defaultProducts,
-      posts: posts.length ? posts : defaultPosts,
-      team: team.length ? team : defaultTeam
-    };
-  } catch {
-    return {
-      site: defaultSite,
-      theme: defaultTheme,
-      sections: defaultHomeSections,
-      services: defaultServices,
-      products: defaultProducts,
-      posts: defaultPosts,
-      team: defaultTeam
-    };
+export async function getPublicSiteContext() {
+  const [site, theme, homePage, services, products, posts, team] = await Promise.all([
+    safelyLoadPublicData("site settings", () => prisma.siteSetting.findFirst(), null),
+    getThemeSetting(),
+    safelyLoadPublicData(
+      "home page sections",
+      () =>
+        prisma.page.findUnique({
+          where: { slug: "home" },
+          include: { sections: { orderBy: { sortOrder: "asc" } } }
+        }),
+      null
+    ),
+    safelyLoadPublicData(
+      "services",
+      () =>
+        prisma.service.findMany({
+          where: { status: PublishStatus.PUBLISHED },
+          orderBy: { createdAt: "desc" },
+          take: 12
+        }),
+      []
+    ),
+    safelyLoadPublicData(
+      "products",
+      () =>
+        prisma.product.findMany({
+          where: { status: PublishStatus.PUBLISHED },
+          orderBy: { createdAt: "desc" },
+          take: 12
+        }),
+      []
+    ),
+    safelyLoadPublicData(
+      "posts",
+      () =>
+        prisma.post.findMany({
+          where: { status: PublishStatus.PUBLISHED },
+          orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+          take: 12
+        }),
+      []
+    ),
+    safelyLoadPublicData(
+      "team",
+      () =>
+        prisma.teamMember.findMany({
+          where: { isVisible: true },
+          orderBy: { sortOrder: "asc" }
+        }),
+      []
+    )
+  ]);
+
+  return {
+    site: { ...defaultSite, ...site },
+    theme: { ...defaultTheme, ...theme },
+    sections: homePage?.sections?.length ? homePage.sections : defaultHomeSections,
+    services: services.length ? services : defaultServices,
+    products: products.length ? products : defaultProducts,
+    posts: posts.length ? posts : defaultPosts,
+    team: team.length ? team : defaultTeam
+  };
+}
+
+async function getThemeSetting() {
+  const themeRows = await safelyLoadPublicData(
+    "theme settings",
+    () =>
+      prisma.$queryRaw<Array<Record<string, string | null>>>`
+        SELECT
+          "primaryColor",
+          "secondaryColor",
+          "accentColor",
+          "backgroundColor",
+          "textColor",
+          "fontFamily",
+          "borderRadius",
+          "headerLayout",
+          "footerLayout",
+          "customCss"
+        FROM "ThemeSetting"
+        ORDER BY "createdAt" ASC
+        LIMIT 1
+      `,
+    []
+  );
+
+  const theme = themeRows[0] ?? null;
+  if (!theme) return null;
+
+  const backgroundRows = await safelyLoadPublicData(
+    "theme background image",
+    () =>
+      prisma.$queryRaw<Array<{ backgroundImageId: string | null }>>`
+        SELECT "backgroundImageId"
+        FROM "ThemeSetting"
+        ORDER BY "createdAt" ASC
+        LIMIT 1
+      `,
+    []
+  );
+
+  return {
+    ...theme,
+    backgroundImageId: backgroundRows[0]?.backgroundImageId ?? null
+  };
+}
+
+async function safelyLoadPublicData<T>(label: string, loader: () => Promise<T>, fallback: T) {
+  try {
+    return await loader();
+  } catch (error) {
+    if (!publicDataWarningLabels.has(label)) {
+      publicDataWarningLabels.add(label);
+      console.warn(`Public ${label} could not be loaded; using defaults.`, error);
+    }
+    return fallback;
   }
 }
 
@@ -77,7 +148,19 @@ export async function getThemeStyle(): Promise<CSSProperties> {
     "--color-text": theme.textColor,
     "--font-family": `${theme.fontFamily}, Arial, sans-serif`,
     "--radius-card": radius,
-    "--radius-button": radius
+    "--radius-button": radius,
+    "--theme-background-image": theme.backgroundImageId ? `url("/api/media/${theme.backgroundImageId}")` : "none",
+    "--theme-background-overlay": theme.backgroundImageId ? "rgb(255 255 255 / 0.18)" : "transparent",
+    ...(theme.backgroundImageId
+      ? {
+          backgroundColor: theme.backgroundColor,
+          backgroundImage: `linear-gradient(rgb(255 255 255 / 0.18), rgb(255 255 255 / 0.18)), url("/api/media/${theme.backgroundImageId}")`,
+          backgroundAttachment: "fixed",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "cover"
+        }
+      : {})
   } as CSSProperties;
 }
 

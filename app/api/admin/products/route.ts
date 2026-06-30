@@ -3,8 +3,10 @@ import { PublishStatus } from "@prisma/client";
 import { fail, ok, validationFail } from "@/lib/api-response";
 import { requireAdminUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import { saveEntityImage } from "@/lib/image-storage";
 import { hasPermission } from "@/lib/permissions";
+import { rejectOversizedRequest } from "@/lib/request-size";
 import { normalizeProductInput, productSchema } from "@/modules/products/products.validation";
 
 export async function GET() {
@@ -18,6 +20,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await requireAdminUser();
   if (!hasPermission(user, "products.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
+
+  const oversized = rejectOversizedRequest(request, env.MAX_UPLOAD_MB, "Product upload");
+  if (oversized) return oversized;
 
   const { fields, images } = await parseProductRequest(request);
   const parsed = productSchema.safeParse(fields);

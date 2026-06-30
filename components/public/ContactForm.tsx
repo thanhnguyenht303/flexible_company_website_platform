@@ -40,6 +40,10 @@ export function ContactForm() {
 
   return (
     <form className="admin-panel form-grid" onSubmit={onSubmit}>
+      <div className="visually-hidden" aria-hidden="true">
+        <label htmlFor="website">Website</label>
+        <input id="website" name="website" tabIndex={-1} autoComplete="off" />
+      </div>
       <div className="field">
         <label htmlFor="name">Name</label>
         <input id="name" name="name" required minLength={2} />

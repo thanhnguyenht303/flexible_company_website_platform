@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
+import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
 export default async function ProductsPage() {
+  if (!(await isPublicPageVisible("products"))) notFound();
+
   const { products } = await getPublicSiteContext();
 
   return (

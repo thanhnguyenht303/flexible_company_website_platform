@@ -17,7 +17,7 @@ export default async function AdminPostsPage() {
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Posts</h1>
+        <h1>Articles</h1>
         <Link className="button" href="/admin/posts/new">
           New
         </Link>

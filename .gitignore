@@ -44,6 +44,7 @@ next-env.d.ts
 # generated and local runtime data
 /public/uploads/*
 !/public/uploads/.gitkeep
+/files_storage/
 /backups/
 /certbot/
 /docker/certbot/

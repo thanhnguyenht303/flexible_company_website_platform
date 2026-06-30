@@ -3,6 +3,7 @@ export const defaultTheme = {
   secondaryColor: "#1E293B",
   accentColor: "#F97316",
   backgroundColor: "#FFFFFF",
+  backgroundImageId: null,
   textColor: "#111827",
   fontFamily: "Inter",
   borderRadius: "medium",

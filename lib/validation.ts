@@ -1,4 +1,13 @@
 import { z } from "zod";
+import { isSafePublicUrl } from "./safe-url";
+
+const customCssSchema = z
+  .string()
+  .max(5000)
+  .refine(
+    (value) => !/(<|<\/style|@import|javascript:|expression\s*\()/i.test(value),
+    "Custom CSS contains unsafe content."
+  );
 
 export const contactInquirySchema = z.object({
   name: z.string().min(2, "Name is required").max(120),
@@ -8,6 +17,13 @@ export const contactInquirySchema = z.object({
   message: z.string().min(10, "Message must be at least 10 characters").max(5000),
   sourceType: z.string().default("contact"),
   sourceId: z.string().optional()
+});
+
+export const serviceReviewSchema = z.object({
+  name: z.string().min(2, "Name is required").max(120),
+  email: z.string().email("Email is invalid").max(180),
+  rating: z.coerce.number().int().min(1).max(5),
+  comment: z.string().min(10, "Review must be at least 10 characters").max(2000)
 });
 
 export const loginSchema = z.object({
@@ -23,7 +39,7 @@ export const siteSettingsSchema = z.object({
   phone: z.string().max(80).optional().nullable(),
   address: z.string().max(240).optional().nullable(),
   domain: z.string().max(180).optional().nullable(),
-  mapEmbedUrl: z.string().url().optional().nullable().or(z.literal(""))
+  mapEmbedUrl: z.string().url().refine(isSafePublicUrl, "URL must use http or https.").optional().nullable().or(z.literal(""))
 });
 
 export const themeSettingsSchema = z.object({
@@ -36,5 +52,5 @@ export const themeSettingsSchema = z.object({
   borderRadius: z.enum(["none", "small", "medium", "large"]),
   headerLayout: z.string().min(2).max(60),
   footerLayout: z.string().min(2).max(60),
-  customCss: z.string().max(5000).optional().nullable()
+  customCss: customCssSchema.optional().nullable()
 });

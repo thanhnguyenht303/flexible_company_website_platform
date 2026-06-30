@@ -6,7 +6,7 @@ export default function NewPostPage() {
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>New Post</h1>
+        <h1>New Article</h1>
         <Link className="button secondary" href="/admin/posts">
           Back
         </Link>

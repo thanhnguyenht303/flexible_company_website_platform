@@ -4,13 +4,13 @@ services:
     container_name: company_site_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DATABASE_NAME:-company_website}
-      POSTGRES_USER: ${DATABASE_USER:-company_user}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-change_this_password}
+      POSTGRES_DB: ${DATABASE_NAME:?DATABASE_NAME is required}
+      POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER is required}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   app:
     build:
@@ -22,13 +22,15 @@ services:
       - .env
     environment:
       IMAGE_STORAGE_ROOT: /app/Images
+      FILE_STORAGE_ROOT: /app/files_storage
     depends_on:
       - postgres
     volumes:
       - ./public/uploads:/app/public/uploads
       - ../Images:/app/Images
+      - ../files_storage:/app/files_storage
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
   nginx:
     image: nginx:alpine

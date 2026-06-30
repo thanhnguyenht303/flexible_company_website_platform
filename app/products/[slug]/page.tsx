@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
+import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
-export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
+export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  if (!(await isPublicPageVisible("products"))) notFound();
+
   const { products } = await getPublicSiteContext();
-  const product = products.find((item) => item.slug === params.slug);
+  const product = products.find((item) => item.slug === slug);
   if (!product) notFound();
   const galleryIds = "gallery" in product ? getGalleryIds(product.gallery) : [];
 

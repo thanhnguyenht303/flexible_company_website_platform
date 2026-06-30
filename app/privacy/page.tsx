@@ -1,6 +1,10 @@
+import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
+import { isPublicPageVisible } from "@/lib/page-visibility";
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  if (!(await isPublicPageVisible("privacy"))) notFound();
+
   return (
     <PublicShell>
       <section className="section">

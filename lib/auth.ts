@@ -27,6 +27,27 @@ function serializeSession(payload: SessionPayload) {
   return `${body}.${sign(body)}`;
 }
 
+function getSessionCookieSecure() {
+  try {
+    return new URL(env.NEXT_PUBLIC_SITE_URL).protocol === "https:";
+  } catch {
+    return env.NODE_ENV === "production";
+  }
+}
+
+function getSessionCookieName() {
+  const secure = getSessionCookieSecure();
+  if (secure) return env.SESSION_COOKIE_NAME;
+
+  return env.SESSION_COOKIE_NAME.replace(/^__(Host|Secure)-/, "");
+}
+
+function getReadableSessionCookieNames() {
+  const names = [getSessionCookieName()];
+  if (!names.includes(env.SESSION_COOKIE_NAME)) names.push(env.SESSION_COOKIE_NAME);
+  return names;
+}
+
 function parseSession(value: string | undefined): SessionPayload | null {
   if (!value) return null;
   const [body, signature] = value.split(".");
@@ -55,21 +76,30 @@ function parseSession(value: string | undefined): SessionPayload | null {
 export async function createAdminSession(userId: string) {
   const sessionHours = env.SESSION_EXPIRES_HOURS ?? (env.SESSION_EXPIRES_DAYS ?? 1) * 24;
   const expiresAt = Date.now() + sessionHours * 60 * 60 * 1000;
-  cookies().set(env.SESSION_COOKIE_NAME, serializeSession({ userId, expiresAt }), {
+  const cookieStore = await cookies();
+  cookieStore.set(getSessionCookieName(), serializeSession({ userId, expiresAt }), {
     httpOnly: true,
     sameSite: "lax",
-    secure: env.NODE_ENV === "production",
+    secure: getSessionCookieSecure(),
+    priority: "high",
     expires: new Date(expiresAt),
     path: "/"
   });
 }
 
-export function destroyAdminSession() {
-  cookies().delete(env.SESSION_COOKIE_NAME);
+export async function destroyAdminSession() {
+  const cookieStore = await cookies();
+  for (const name of getReadableSessionCookieNames()) {
+    cookieStore.delete(name);
+  }
 }
 
 export async function getAdminUser() {
-  const payload = parseSession(cookies().get(env.SESSION_COOKIE_NAME)?.value);
+  const cookieStore = await cookies();
+  const sessionValue = getReadableSessionCookieNames()
+    .map((name) => cookieStore.get(name)?.value)
+    .find(Boolean);
+  const payload = parseSession(sessionValue);
   if (!payload) return null;
 
   return prisma.user.findFirst({

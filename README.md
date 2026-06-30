@@ -6,11 +6,13 @@ A reusable Next.js, TypeScript, Prisma, PostgreSQL, and Docker Compose platform 
 
 - Public website pages for home, about, services, products, team, blog, and contact.
 - Admin dashboard routes for settings, theme, pages, services, products, posts, team, media, inquiries, and users.
+- Public service reviews with required name/email, visible customer name, hidden email, rating, and comment.
 - PostgreSQL Prisma schema for roles, users, site settings, theme settings, pages, sections, products, services, posts, team members, media, inquiries, and audit logs.
 - First-admin bootstrap script with bcrypt password hashing.
 - Docker Compose stack for PostgreSQL, the Next.js app, and Nginx.
 - `.env.example`, `.gitignore`, backup/restore scripts, and developer docs.
 - External image library rooted at `../Images` locally, with folders for posts, products, services, team, logos, and general assets. Docker maps that folder to `/app/Images`.
+- Private file library rooted at `../files_storage` locally, with folders for job application resumes and future non-image files. Docker maps that folder to `/app/files_storage`.
 
 ## Local Setup
 
@@ -58,6 +60,7 @@ Set DNS to the server IP, update `NEXT_PUBLIC_SITE_URL`, and update `docker/ngin
 
 ```text
 ../Images/           External local image library for uploaded media
+../files_storage/    External private file library for resumes and documents
 app/                 Next.js App Router pages and API route handlers
 components/          Public, admin, and shared UI components
 config/              Default site, theme, and enabled module config
@@ -87,5 +90,7 @@ pnpm backup:db
 - [Setup](docs/setup.md)
 - [Deployment](docs/deployment.md)
 - [Image Storage](docs/image-storage.md)
+- [File Storage](docs/file-storage.md)
+- [Visual Page Builder](docs/page-builder.md)
 - [Module Development](docs/module-development.md)
 - [API](docs/api.md)

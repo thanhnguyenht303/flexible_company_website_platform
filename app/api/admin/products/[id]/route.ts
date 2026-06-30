@@ -4,8 +4,10 @@ import { z } from "zod";
 import { fail, ok, validationFail } from "@/lib/api-response";
 import { requireAdminUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import { deleteEntityImageFolder, deleteStoredImage, saveEntityImage } from "@/lib/image-storage";
 import { hasPermission } from "@/lib/permissions";
+import { rejectOversizedRequest } from "@/lib/request-size";
 import { slugify } from "@/lib/slug";
 
 const updateProductSchema = z
@@ -22,27 +24,32 @@ const updateProductSchema = z
   });
 
 type Params = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export async function GET(_request: Request, { params }: Params) {
+  const { id } = await params;
   const user = await requireAdminUser();
   if (!hasPermission(user, "products.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
 
-  const product = await prisma.product.findUnique({ where: { id: params.id } });
+  const product = await prisma.product.findUnique({ where: { id } });
   if (!product) return fail("NOT_FOUND", "Product not found.", 404);
 
   return ok(product);
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+  const { id } = await params;
   const user = await requireAdminUser();
   if (!hasPermission(user, "products.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
 
-  const existing = await prisma.product.findUnique({ where: { id: params.id } });
+  const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) return fail("NOT_FOUND", "Product not found.", 404);
+
+  const oversized = rejectOversizedRequest(request, env.MAX_UPLOAD_MB, "Product upload");
+  if (oversized) return oversized;
 
   const { fields, images } = await parseProductRequest(request);
   const parsed = updateProductSchema.safeParse(fields);
@@ -72,7 +79,7 @@ export async function PATCH(request: Request, { params }: Params) {
     : [];
 
   for (const asset of removedAssets) {
-    if (asset.filename.startsWith(`products/${params.id}/`)) {
+    if (asset.filename.startsWith(`products/${id}/`)) {
       await deleteStoredImage(asset.filename);
     }
   }
@@ -82,11 +89,11 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const retainedGallery = currentGallery.filter((id) => !removeImageIds.has(id));
-  const newImageIds = await saveProductImages(params.id, input.name ?? existing.name, images, user.id);
+  const newImageIds = await saveProductImages(id, input.name ?? existing.name, images, user.id);
   const nextGallery = [...retainedGallery, ...newImageIds];
 
   const product = await prisma.product.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(nextSlug ? { slug: nextSlug } : {}),
@@ -105,21 +112,22 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
+  const { id } = await params;
   const user = await requireAdminUser();
   if (!hasPermission(user, "products.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
 
-  const existing = await prisma.product.findUnique({ where: { id: params.id } });
+  const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) return fail("NOT_FOUND", "Product not found.", 404);
 
-  await prisma.product.delete({ where: { id: params.id } });
+  await prisma.product.delete({ where: { id } });
   await prisma.mediaAsset.deleteMany({
     where: {
       filename: {
-        startsWith: `products/${params.id}/`
+        startsWith: `products/${id}/`
       }
     }
   });
-  await deleteEntityImageFolder("products", params.id);
+  await deleteEntityImageFolder("products", id);
 
   revalidateProductPaths(existing.slug);
   return ok({ deleted: true });

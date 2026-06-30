@@ -1,8 +1,12 @@
+import { notFound } from "next/navigation";
 import { ContactForm } from "@/components/public/ContactForm";
 import { PublicShell } from "@/components/public/PublicShell";
+import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
 export default async function ContactPage() {
+  if (!(await isPublicPageVisible("contact"))) notFound();
+
   const { site } = await getPublicSiteContext();
 
   return (

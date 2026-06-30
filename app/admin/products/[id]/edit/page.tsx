@@ -23,8 +23,9 @@ async function getProduct(id: string) {
   }
 }
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
-  const data = await getProduct(params.id);
+export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const data = await getProduct(id);
   if (!data) notFound();
 
   return (

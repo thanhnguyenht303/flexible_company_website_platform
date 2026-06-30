@@ -37,3 +37,4 @@ All JSON endpoints return a consistent envelope.
 | `GET` | `/api/admin/inquiries` | `inquiries.manage` | Lists recent inquiries. |
 | `PATCH` | `/api/admin/inquiries` | `inquiries.manage` | Updates inquiry status or internal note. |
 | `POST` | `/api/public/inquiries` | Public | Creates a contact inquiry. |
+| `POST` | `/api/public/services/[slug]/reviews` | Public | Creates a visible service review. Email is stored but not shown publicly. |
