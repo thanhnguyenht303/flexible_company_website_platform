@@ -1,36 +1,27 @@
 import { PublicShell } from "@/components/public/PublicShell";
-import { HomeSectionsRenderer } from "@/components/shared/HomeSectionsRenderer";
 import { VisualPageRenderer } from "@/components/shared/VisualPageRenderer";
-import { getVisiblePageSlugs } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
-import { hasBuilderSections, sectionsToBuilderBlocks } from "@/modules/page-builder/page-builder.utils";
+import type { BuilderBlock } from "@/modules/page-builder/page-builder.types";
+import { sectionsToBuilderBlocks } from "@/modules/page-builder/page-builder.utils";
 
 export default async function HomePage() {
-  const [{ site, services, products, posts, sections }, visiblePages] = await Promise.all([
-    getPublicSiteContext(),
-    getVisiblePageSlugs()
-  ]);
-  const builderBlocks = sectionsToBuilderBlocks(sections);
-  const useBuilder = hasBuilderSections(sections);
-
-  if (useBuilder) {
-    return (
-      <PublicShell pageSlug="home">
-        <VisualPageRenderer blocks={builderBlocks} />
-      </PublicShell>
-    );
-  }
+  const { sections, team, services, posts } = await getPublicSiteContext();
+  const builderBlocks = sectionsToBuilderBlocks(sections).filter(isCanvasBlock);
 
   return (
     <PublicShell pageSlug="home">
-      <HomeSectionsRenderer
-        sections={sections}
-        site={site}
-        services={services}
-        products={products}
-        posts={posts}
-        visiblePages={visiblePages}
+      <VisualPageRenderer
+        blocks={builderBlocks}
+        dynamicContent={{
+          team,
+          services,
+          posts
+        }}
       />
     </PublicShell>
   );
+}
+
+function isCanvasBlock(block: BuilderBlock) {
+  return typeof block.canvasX === "number" && typeof block.canvasY === "number" && typeof block.canvasWidth === "number";
 }

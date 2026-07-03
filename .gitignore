@@ -48,6 +48,7 @@ next-env.d.ts
 /backups/
 /certbot/
 /docker/certbot/
+/.tools/
 
 # OS/editor
 .idea/

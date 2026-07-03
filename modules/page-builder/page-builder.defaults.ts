@@ -9,6 +9,10 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
     align: "left" as const,
     paddingY: 56,
     blockWidth: 100,
+    canvasX: 8,
+    canvasY: 40,
+    canvasWidth: 84,
+    canvasHeight: 260,
     minHeight: 0
   };
 
@@ -23,14 +27,18 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         align: "center",
         width: "wide",
         paddingY: 96,
-        minHeight: 520
+        minHeight: 520,
+        borderRadius: 16,
+        shadow: "soft"
       };
     case "text":
       return {
         ...base,
         title: "Section heading",
         text: "Add paragraph content here.",
-        fontSize: 18
+        fontSize: 18,
+        borderRadius: 0,
+        shadow: "none"
       };
     case "image":
       return {
@@ -39,14 +47,22 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         imageAlt: "Page image",
         align: "center",
         width: "wide",
-        minHeight: 320
+        minHeight: 320,
+        borderRadius: 12,
+        shadow: "medium",
+        hoverEffect: true
       };
     case "button":
       return {
         ...base,
         buttonText: "Learn more",
         buttonUrl: "/about",
-        align: "center"
+        align: "center",
+        background: "#2563eb",
+        color: "#ffffff",
+        borderRadius: 999,
+        shadow: "medium",
+        hoverEffect: true
       };
     case "banner":
       return {
@@ -54,7 +70,9 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         title: "Announcement",
         text: "Share a company update, offer, or important message.",
         background: "#eef2ff",
-        align: "center"
+        align: "center",
+        borderRadius: 14,
+        shadow: "soft"
       };
     case "cards":
       return {
@@ -65,7 +83,9 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
           { title: "Flexible layout", text: "Arrange sections for your audience." },
           { title: "Reusable blocks", text: "Build pages from consistent components." }
         ],
-        width: "wide"
+        width: "wide",
+        borderRadius: 10,
+        hoverEffect: true
       };
     case "twoColumn":
       return {
@@ -74,12 +94,14 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         leftText: "Use this side for context.",
         rightTitle: "Right column",
         rightText: "Use this side for supporting detail.",
-        width: "wide"
+        width: "wide",
+        borderRadius: 10
       };
     case "divider":
       return {
         ...base,
-        paddingY: 20
+        paddingY: 20,
+        borderColor: "#d8dee9"
       };
     case "spacer":
       return {
@@ -95,20 +117,56 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         buttonText: "Contact us",
         buttonUrl: "/contact",
         align: "center",
-        background: "#f8fafc"
+        background: "#f8fafc",
+        borderRadius: 14,
+        shadow: "soft"
+      };
+    case "team":
+      return {
+        ...base,
+        title: "Team",
+        width: "full",
+        canvasHeight: 320,
+        scrollMode: "infinite",
+        scrollDirection: "horizontal",
+        showCarouselArrows: false,
+        autoScroll: true,
+        autoScrollSpeed: 40,
+        titleLinkEnabled: true,
+        titleLinkUrl: "/team"
+      };
+    case "services":
+      return {
+        ...base,
+        title: "Services",
+        width: "full",
+        canvasHeight: 320,
+        scrollMode: "infinite",
+        scrollDirection: "horizontal",
+        showCarouselArrows: false,
+        autoScroll: true,
+        autoScrollSpeed: 40,
+        titleLinkEnabled: true,
+        titleLinkUrl: "/services"
+      };
+    case "blog":
+      return {
+        ...base,
+        title: "Blog",
+        width: "full",
+        canvasHeight: 300,
+        scrollMode: "infinite",
+        scrollDirection: "horizontal",
+        showCarouselArrows: false,
+        autoScroll: true,
+        autoScrollSpeed: 40,
+        titleLinkEnabled: true,
+        titleLinkUrl: "/blog"
       };
   }
 }
 
 export const defaultBuilderBlocks: BuilderBlock[] = [
-  {
-    ...createBuilderBlock("hero"),
-    id: "default-hero",
-    title: "Welcome to Demo Company",
-    subtitle: "Introduce your company, products, and services with a flexible website."
-  },
-  { ...createBuilderBlock("cards"), id: "default-cards" },
-  { ...createBuilderBlock("contactCta"), id: "default-contact" }
 ];
 
 function createBlockId() {

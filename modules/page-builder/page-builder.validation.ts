@@ -14,9 +14,20 @@ const colorValueSchema = z
     "Use a hex color or a safe CSS color keyword."
   );
 
+const textElementStyleSchema = z.object({
+  fontFamily: z.string().max(120).optional(),
+  fontSize: z.coerce.number().min(8).max(120).optional(),
+  fontWeight: z.coerce.number().min(100).max(1000).optional(),
+  color: colorValueSchema.optional(),
+  lineHeight: z.coerce.number().min(0.8).max(3).optional(),
+  letterSpacing: z.coerce.number().min(-2).max(20).optional(),
+  align: z.enum(["left", "center", "right"]).optional(),
+  wrap: z.boolean().optional()
+});
+
 const blockSchema = z.object({
   id: z.string().min(1),
-  type: z.enum(["hero", "text", "image", "button", "banner", "cards", "twoColumn", "divider", "spacer", "contactCta"]),
+  type: z.enum(["hero", "text", "image", "button", "banner", "cards", "twoColumn", "divider", "spacer", "contactCta", "team", "services", "blog"]),
   enabled: z.boolean().default(true),
   title: z.string().max(240).optional(),
   subtitle: z.string().max(500).optional(),
@@ -42,13 +53,53 @@ const blockSchema = z.object({
   rightText: z.string().max(1500).optional(),
   width: z.enum(["narrow", "normal", "wide", "full"]).optional(),
   align: z.enum(["left", "center", "right"]).optional(),
+  verticalAlign: z.enum(["top", "middle", "bottom"]).optional(),
+  contentDirection: z.enum(["horizontal", "vertical", "horizontal-reverse", "vertical-reverse"]).optional(),
   background: colorValueSchema.optional(),
   color: colorValueSchema.optional(),
+  borderColor: colorValueSchema.optional(),
+  borderRadius: z.coerce.number().min(0).max(80).optional(),
+  shadow: z.enum(["none", "soft", "medium", "strong"]).optional(),
+  opacity: z.coerce.number().min(0.1).max(1).optional(),
+  hoverEffect: z.boolean().optional(),
   fontSize: z.coerce.number().min(12).max(64).optional(),
+  fontFamily: z.string().max(120).optional(),
+  bold: z.boolean().optional(),
+  italic: z.boolean().optional(),
+  underline: z.boolean().optional(),
+  lineHeight: z.coerce.number().min(0.8).max(3).optional(),
+  letterSpacing: z.coerce.number().min(-2).max(12).optional(),
+  paragraphSpacing: z.coerce.number().min(0).max(80).optional(),
+  gap: z.coerce.number().min(0).max(120).optional(),
+  padding: z.coerce.number().min(0).max(120).optional(),
   paddingY: z.coerce.number().min(0).max(180).optional(),
   blockWidth: z.coerce.number().min(25).max(100).optional(),
+  canvasX: z.coerce.number().min(0).max(100).optional(),
+  canvasY: z.coerce.number().min(0).max(5000).optional(),
+  canvasWidth: z.coerce.number().min(5).max(100).optional(),
+  canvasHeight: z.coerce.number().min(48).max(2000).optional(),
   minHeight: z.coerce.number().min(0).max(1000).optional(),
-  height: z.coerce.number().min(0).max(240).optional()
+  height: z.coerce.number().min(0).max(240).optional(),
+  imageFit: z.enum(["cover", "contain", "fill"]).optional(),
+  imageZoom: z.coerce.number().min(0.25).max(4).optional(),
+  imageOffsetX: z.coerce.number().min(-100).max(100).optional(),
+  imageOffsetY: z.coerce.number().min(-100).max(100).optional(),
+  focalX: z.coerce.number().min(0).max(100).optional(),
+  focalY: z.coerce.number().min(0).max(100).optional(),
+  stackOnMobile: z.boolean().optional(),
+  textStyle: z
+    .object({
+      title: textElementStyleSchema.optional(),
+      body: textElementStyleSchema.optional()
+    })
+    .optional(),
+  scrollMode: z.enum(["none", "normal", "infinite"]).optional(),
+  scrollDirection: z.enum(["horizontal", "vertical"]).optional(),
+  showCarouselArrows: z.boolean().optional(),
+  autoScroll: z.boolean().optional(),
+  autoScrollSpeed: z.coerce.number().min(0).max(240).optional(),
+  titleLinkEnabled: z.boolean().optional(),
+  titleLinkUrl: z.string().max(500).optional()
 });
 
 export const pageBuilderSaveSchema = z.object({
