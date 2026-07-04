@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { InfiniteLoopScroller } from "@/components/shared/InfiniteLoopScroller";
+import { localizedField } from "@/lib/i18n/content";
+import { defaultLanguage, translate, type Language } from "@/lib/i18n/translations";
 import { slugify } from "@/lib/slug";
 import type { BuilderBlock } from "@/modules/page-builder/page-builder.types";
 
@@ -8,20 +10,27 @@ export type DynamicBuilderContent = {
     id?: string | null;
     name: string;
     position?: string | null;
+    positionVi?: string | null;
     bio?: string | null;
+    bioVi?: string | null;
     photoId?: string | null;
   }>;
   services?: Array<{
     name: string;
+    nameVi?: string | null;
     slug: string;
     summary?: string | null;
+    summaryVi?: string | null;
     imageId?: string | null;
   }>;
   posts?: Array<{
     title: string;
+    titleVi?: string | null;
     slug: string;
     excerpt?: string | null;
+    excerptVi?: string | null;
     content?: string | null;
+    contentVi?: string | null;
     featuredImageId?: string | null;
   }>;
 };
@@ -31,6 +40,7 @@ type VisualPageRendererProps = {
   editing?: boolean;
   includeDisabled?: boolean;
   dynamicContent?: DynamicBuilderContent;
+  language?: Language;
 };
 
 export const visualCanvasMinHeight = 720;
@@ -43,7 +53,7 @@ export function getVisualCanvasHeight(blocks: BuilderBlock[]) {
   );
 }
 
-export function VisualPageRenderer({ blocks, editing = false, includeDisabled = false, dynamicContent }: VisualPageRendererProps) {
+export function VisualPageRenderer({ blocks, editing = false, includeDisabled = false, dynamicContent, language = defaultLanguage }: VisualPageRendererProps) {
   const visibleBlocks = blocks.filter((block) => block.enabled || includeDisabled || editing);
   const usesCanvas = visibleBlocks.some(isCanvasBlock);
   const canvasHeight = getVisualCanvasHeight(visibleBlocks);
@@ -53,7 +63,7 @@ export function VisualPageRenderer({ blocks, editing = false, includeDisabled = 
       <div className={editing ? "visual-page visual-page--editing visual-page--canvas" : "visual-page visual-page--canvas"}>
         <div className="visual-page-canvas" style={{ "--visual-canvas-height": `${canvasHeight}px` } as React.CSSProperties}>
           {visibleBlocks.map((block) => (
-            <BuilderBlockView block={block} editing={editing} canvas dynamicContent={dynamicContent} key={block.id} />
+            <BuilderBlockView block={block} editing={editing} canvas dynamicContent={dynamicContent} language={language} key={block.id} />
           ))}
           {!visibleBlocks.length ? <div className="visual-page-empty" aria-hidden="true" /> : null}
         </div>
@@ -64,7 +74,7 @@ export function VisualPageRenderer({ blocks, editing = false, includeDisabled = 
   return (
     <div className={editing ? "visual-page visual-page--editing" : "visual-page"}>
       {visibleBlocks.map((block) => (
-        <BuilderBlockView block={block} editing={editing} dynamicContent={dynamicContent} key={block.id} />
+        <BuilderBlockView block={block} editing={editing} dynamicContent={dynamicContent} language={language} key={block.id} />
       ))}
     </div>
   );
@@ -74,12 +84,14 @@ export function BuilderBlockView({
   block,
   editing,
   canvas = false,
-  dynamicContent
+  dynamicContent,
+  language = defaultLanguage
 }: {
   block: BuilderBlock;
   editing: boolean;
   canvas?: boolean;
   dynamicContent?: DynamicBuilderContent;
+  language?: Language;
 }) {
   const contentDirection = block.contentDirection ?? "horizontal";
   const rotatesTextContent = isCanvasBlock(block) && isRotatableTextBlock(block);
@@ -141,19 +153,19 @@ export function BuilderBlockView({
       style={style}
     >
       <div className="builder-public-inner">
-        {editing && !block.enabled ? <span className="badge">Hidden</span> : null}
-        <div className="builder-public-content">{renderBlockContent(block, dynamicContent)}</div>
+        {editing && !block.enabled ? <span className="badge">{translate(language, "builder.hidden")}</span> : null}
+        <div className="builder-public-content">{renderBlockContent(block, dynamicContent, language)}</div>
       </div>
     </section>
   );
 }
 
-function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilderContent) {
+function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilderContent, language: Language = defaultLanguage) {
   switch (block.type) {
     case "hero":
       return (
         <div className="builder-hero">
-          <p className="article-kicker builder-body-text">Welcome</p>
+          <p className="article-kicker builder-body-text">{translate(language, "builder.welcome")}</p>
           <h1 className="builder-title-text">{block.title}</h1>
           {block.subtitle ? <p className="builder-body-text">{block.subtitle}</p> : null}
           {block.buttonText && block.buttonUrl ? (
@@ -177,7 +189,7 @@ function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilder
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`/api/media/${block.imageId}`} alt={block.imageAlt ?? ""} />
           ) : (
-            <div className="builder-image-placeholder">Image</div>
+            <div className="builder-image-placeholder">{translate(language, "builder.image")}</div>
           )}
           {block.title ? <figcaption className="builder-title-text">{block.title}</figcaption> : null}
         </figure>
@@ -250,44 +262,47 @@ function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilder
         </div>
       );
     case "team":
-      return <DynamicContentBlock block={block} items={dynamicContent?.team ?? []} kind="team" />;
+      return <DynamicContentBlock block={block} items={dynamicContent?.team ?? []} kind="team" language={language} />;
     case "services":
-      return <DynamicContentBlock block={block} items={dynamicContent?.services ?? []} kind="services" />;
+      return <DynamicContentBlock block={block} items={dynamicContent?.services ?? []} kind="services" language={language} />;
     case "blog":
-      return <DynamicContentBlock block={block} items={dynamicContent?.posts ?? []} kind="blog" />;
+      return <DynamicContentBlock block={block} items={dynamicContent?.posts ?? []} kind="blog" language={language} />;
   }
 }
 
 function DynamicContentBlock({
   block,
   kind,
-  items
+  items,
+  language
 }: {
   block: BuilderBlock;
   kind: "team" | "services" | "blog";
   items: NonNullable<DynamicBuilderContent["team" | "services" | "posts"]>;
+  language: Language;
 }) {
+  const title = getBuilderDynamicTitle(block.title, kind, language);
   const cards =
     kind === "team"
-      ? (items as NonNullable<DynamicBuilderContent["team"]>).map((item, index) => <TeamCard item={item} key={`team-${item.name}-${index}`} />)
+      ? (items as NonNullable<DynamicBuilderContent["team"]>).map((item, index) => <TeamCard item={item} language={language} key={`team-${item.name}-${index}`} />)
       : kind === "services"
-        ? (items as NonNullable<DynamicBuilderContent["services"]>).map((item, index) => <ServiceCard item={item} key={`services-${item.slug}-${index}`} />)
-        : (items as NonNullable<DynamicBuilderContent["posts"]>).map((item, index) => <BlogCard item={item} key={`blog-${item.slug}-${index}`} />);
+        ? (items as NonNullable<DynamicBuilderContent["services"]>).map((item, index) => <ServiceCard item={item} language={language} key={`services-${item.slug}-${index}`} />)
+        : (items as NonNullable<DynamicBuilderContent["posts"]>).map((item, index) => <BlogCard item={item} language={language} key={`blog-${item.slug}-${index}`} />);
 
   return (
     <div className="builder-dynamic-block">
-      {block.title ? (
+      {title ? (
         <div className="builder-dynamic-header">
           <h2 className="builder-title-text builder-dynamic-title">
             {(block.titleLinkEnabled ?? true) ? (
-              <Link href={block.titleLinkUrl || getDefaultDynamicRoute(kind)}>{block.title}</Link>
+              <Link href={block.titleLinkUrl || getDefaultDynamicRoute(kind)}>{title}</Link>
             ) : (
-              block.title
+              title
             )}
           </h2>
           {(block.titleLinkEnabled ?? true) ? (
             <Link className="builder-dynamic-view-all" href={block.titleLinkUrl || getDefaultDynamicRoute(kind)}>
-              View all
+              {translate(language, "builder.viewAll")}
             </Link>
           ) : null}
         </div>
@@ -305,7 +320,9 @@ function DynamicContentBlock({
   );
 }
 
-function TeamCard({ item }: { item: NonNullable<DynamicBuilderContent["team"]>[number] }) {
+function TeamCard({ item, language }: { item: NonNullable<DynamicBuilderContent["team"]>[number]; language: Language }) {
+  const position = localizedField(item, "position", language);
+
   return (
     <Link className="card builder-dynamic-card builder-dynamic-card--team" href={`/team/${item.id || slugify(item.name)}`}>
       {item.photoId ? (
@@ -319,12 +336,14 @@ function TeamCard({ item }: { item: NonNullable<DynamicBuilderContent["team"]>[n
         </div>
       )}
       <h3 className="builder-title-text">{item.name}</h3>
-      {item.position ? <p className="builder-body-text"><strong>{item.position}</strong></p> : null}
+      {position ? <p className="builder-body-text"><strong>{position}</strong></p> : null}
     </Link>
   );
 }
 
-function ServiceCard({ item }: { item: NonNullable<DynamicBuilderContent["services"]>[number] }) {
+function ServiceCard({ item, language }: { item: NonNullable<DynamicBuilderContent["services"]>[number]; language: Language }) {
+  const name = localizedField(item, "name", language);
+
   return (
     <Link className="card builder-dynamic-card" href={`/services/${item.slug}`}>
       {item.imageId ? (
@@ -333,17 +352,22 @@ function ServiceCard({ item }: { item: NonNullable<DynamicBuilderContent["servic
           <img src={`/api/media/${item.imageId}`} alt="" />
         </div>
       ) : null}
-      <h3 className="builder-title-text">{item.name}</h3>
+      <h3 className="builder-title-text">{name}</h3>
     </Link>
   );
 }
 
-function BlogCard({ item }: { item: NonNullable<DynamicBuilderContent["posts"]>[number] }) {
+function BlogCard({ item, language }: { item: NonNullable<DynamicBuilderContent["posts"]>[number]; language: Language }) {
+  const title = localizedField(item, "title", language);
+  const content = localizedField(item, "content", language) || localizedField(item, "excerpt", language);
+
   return (
     <Link className="blog-card builder-dynamic-card" href={`/blog/${item.slug}`}>
-      <span>Article</span>
-      <h3 className="builder-title-text">{item.title}</h3>
-      <small>{getReadingTime(item.content ?? item.excerpt ?? "")} min read</small>
+      <span>{translate(language, "builder.article")}</span>
+      <h3 className="builder-title-text">{title}</h3>
+      <small>
+        {getReadingTime(content)} {translate(language, "builder.minRead")}
+      </small>
     </Link>
   );
 }
@@ -400,6 +424,13 @@ function getDefaultDynamicRoute(kind: "team" | "services" | "blog") {
   if (kind === "team") return "/team";
   if (kind === "services") return "/services";
   return "/blog";
+}
+
+function getBuilderDynamicTitle(title: string | undefined, kind: "team" | "services" | "blog", language: Language) {
+  if (!title) return "";
+  const defaultTitle = kind === "team" ? "Team" : kind === "services" ? "Services" : "Blog";
+  if (title === defaultTitle) return translate(language, `nav.${kind}`);
+  return title;
 }
 
 function getInitials(name: string) {

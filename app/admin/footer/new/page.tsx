@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { FooterPartnerForm } from "@/components/admin/FooterPartnerForm";
+import { getServerTranslations } from "@/lib/i18n/server";
 
-export default function NewFooterPartnerPage() {
+export default async function NewFooterPartnerPage() {
+  const { t } = await getServerTranslations();
+
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>New Footer Collaborator</h1>
+        <h1>{t("admin.pageTitles.newFooterCollaborator")}</h1>
         <Link className="button secondary" href="/admin/footer">
-          Back
+          {t("admin.common.back")}
         </Link>
       </div>
       <FooterPartnerForm />

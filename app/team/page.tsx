@@ -1,12 +1,16 @@
 import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
+import { localizeTeamMember } from "@/lib/i18n/content";
+import { getCurrentLanguage } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/translations";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
 export default async function TeamPage() {
   if (!(await isPublicPageVisible("team"))) notFound();
 
-  const { team } = await getPublicSiteContext();
+  const [{ team }, language] = await Promise.all([getPublicSiteContext(), getCurrentLanguage()]);
+  const localizedTeam = team.map((member) => localizeTeamMember(member, language));
 
   return (
     <PublicShell>
@@ -14,12 +18,12 @@ export default async function TeamPage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <h2>Team</h2>
-              <p>Employee profiles are sortable and can be hidden without deleting records.</p>
+              <h2>{translate(language, "pages.team.title")}</h2>
+              <p>{translate(language, "pages.team.description")}</p>
             </div>
           </div>
           <div className="grid">
-            {team.map((member) => (
+            {localizedTeam.map((member) => (
               <article className="card" key={member.name}>
                 {"photoId" in member && member.photoId ? (
                   <div className="employee-card-photo">
@@ -34,6 +38,9 @@ export default async function TeamPage() {
                 <p>{member.bio}</p>
               </article>
             ))}
+            {localizedTeam.length === 0 ? (
+              <p className="message">No team members are visible yet.</p>
+            ) : null}
           </div>
         </div>
       </section>

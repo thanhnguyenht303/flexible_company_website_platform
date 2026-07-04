@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { TeamMemberForm } from "@/components/admin/TeamMemberForm";
 import { prisma } from "@/lib/db";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 async function getMember(id: string) {
   try {
@@ -14,15 +15,15 @@ async function getMember(id: string) {
 
 export default async function EditTeamMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const member = await getMember(id);
+  const [member, { t }] = await Promise.all([getMember(id), getServerTranslations()]);
   if (!member) notFound();
 
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Edit Employee</h1>
+        <h1>{t("admin.pageTitles.editEmployee")}</h1>
         <Link className="button secondary" href="/admin/team">
-          Back
+          {t("admin.common.back")}
         </Link>
       </div>
       <TeamMemberForm
@@ -30,7 +31,9 @@ export default async function EditTeamMemberPage({ params }: { params: Promise<{
           id: member.id,
           name: member.name,
           position: member.position,
+          positionVi: member.positionVi,
           bio: member.bio,
+          bioVi: member.bioVi,
           email: member.email,
           phone: member.phone,
           sortOrder: member.sortOrder,

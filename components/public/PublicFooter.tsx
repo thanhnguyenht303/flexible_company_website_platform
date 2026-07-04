@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "@/components/public/LanguageProvider";
 import type { PublicFooterPartner } from "@/lib/footer-partners";
 
 type PublicFooterProps = {
@@ -13,13 +16,15 @@ type PublicFooterProps = {
 };
 
 export function PublicFooter({ site, showPrivacy, partners }: PublicFooterProps) {
+  const { t } = useLanguage();
+
   return (
     <footer className="site-footer">
       {partners.length ? (
         <div className="container footer-collaborators">
           <div>
-            <h2>Collaborating Companies</h2>
-            <p>Companies and businesses that collaborate with us or have worked with us before.</p>
+            <h2>{t("footer.collaboratorsTitle")}</h2>
+            <p>{t("footer.collaboratorsText")}</p>
           </div>
           <div className="footer-partner-grid">
             {partners.map((partner) => {
@@ -51,8 +56,8 @@ export function PublicFooter({ site, showPrivacy, partners }: PublicFooterProps)
           <strong>{site.siteName}</strong>
           <p>{site.address}</p>
         </div>
-        <nav className="nav" aria-label="Footer navigation">
-          {showPrivacy ? <Link href="/privacy">Privacy</Link> : null}
+        <nav className="nav" aria-label={t("shell.footerNavigation")}>
+          {showPrivacy ? <Link href="/privacy">{t("nav.privacy")}</Link> : null}
           {site.email ? <a href={`mailto:${site.email}`}>{site.email}</a> : null}
           {site.phone ? <a href={`tel:${site.phone}`}>{site.phone}</a> : null}
         </nav>

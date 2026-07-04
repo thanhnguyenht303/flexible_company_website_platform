@@ -136,9 +136,12 @@ model Category {
 model Product {
   id             String        @id @default(cuid())
   name           String
+  nameVi         String?
   slug           String        @unique
   summary        String?
+  summaryVi      String?
   description    String?
+  descriptionVi  String?
   categoryId     String?
   imageId        String?
   gallery        Json?
@@ -153,9 +156,12 @@ model Product {
 model Service {
   id             String        @id @default(cuid())
   name           String
+  nameVi         String?
   slug           String        @unique
   summary        String?
+  summaryVi      String?
   description    String?
+  descriptionVi  String?
   categoryId     String?
   imageId        String?
   gallery        Json?
@@ -185,9 +191,12 @@ model ServiceReview {
 model Post {
   id              String        @id @default(cuid())
   title           String
+  titleVi         String?
   slug            String        @unique
   excerpt         String?
+  excerptVi       String?
   content         String
+  contentVi       String?
   categoryId      String?
   tagNames        String[]
   featuredImageId String?
@@ -203,7 +212,9 @@ model TeamMember {
   id          String   @id @default(cuid())
   name        String
   position    String?
+  positionVi  String?
   bio         String?
+  bioVi       String?
   photoId     String?
   email       String?
   phone       String?

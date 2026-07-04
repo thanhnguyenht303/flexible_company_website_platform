@@ -1,13 +1,6 @@
 import type { CSSProperties } from "react";
 import { PublishStatus } from "@prisma/client";
-import {
-  defaultHomeSections,
-  defaultPosts,
-  defaultProducts,
-  defaultServices,
-  defaultSite,
-  defaultTeam
-} from "@/config/default-site";
+import { defaultHomeSections, defaultSite } from "@/config/default-site";
 import { defaultTheme, radiusMap } from "@/config/default-theme";
 import { prisma } from "@/lib/db";
 
@@ -73,10 +66,10 @@ export async function getPublicSiteContext() {
     site: { ...defaultSite, ...site },
     theme: { ...defaultTheme, ...theme },
     sections: homePage?.sections?.length ? homePage.sections : defaultHomeSections,
-    services: services.length ? services : defaultServices,
-    products: products.length ? products : defaultProducts,
-    posts: posts.length ? posts : defaultPosts,
-    team: team.length ? team : defaultTeam
+    services,
+    products,
+    posts,
+    team
   };
 }
 

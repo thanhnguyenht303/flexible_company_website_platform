@@ -2,21 +2,30 @@ import Image from "next/image";
 import Link from "next/link";
 import { requireAdminUser } from "@/lib/auth";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { LanguageProvider } from "@/components/public/LanguageProvider";
+import { LanguageSwitcher } from "@/components/public/LanguageSwitcher";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 export async function AdminShell({ children }: { children: React.ReactNode }) {
-  const user = await requireAdminUser();
+  const [user, { language, t }] = await Promise.all([requireAdminUser(), getServerTranslations()]);
+  const displayName = user.displayName ?? user.username;
 
   return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <Link href="/admin/dashboard" className="brand">
-          <Image src="/placeholder-logo.svg" alt="" width={34} height={34} />
-          <span>CMS Admin</span>
-        </Link>
-        <AdminNav />
-        <p className="message">Signed in as {user.displayName ?? user.username}</p>
-      </aside>
-      <main className="admin-main">{children}</main>
-    </div>
+    <LanguageProvider initialLanguage={language}>
+      <div className="admin-shell">
+        <aside className="admin-sidebar">
+          <Link href="/admin/dashboard" className="brand">
+            <Image src="/placeholder-logo.svg" alt="" width={34} height={34} />
+            <span>{t("admin.brand")}</span>
+          </Link>
+          <div className="admin-language">
+            <LanguageSwitcher />
+          </div>
+          <AdminNav />
+          <p className="message">{t("admin.signedInAs", { name: displayName })}</p>
+        </aside>
+        <main className="admin-main">{children}</main>
+      </div>
+    </LanguageProvider>
   );
 }

@@ -3,39 +3,41 @@ import { PageVisibilitySettings } from "@/components/admin/PageVisibilitySetting
 import Link from "next/link";
 import { getPublicPageVisibility } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 export default async function AdminPagesPage() {
-  const [{ sections }, pages] = await Promise.all([
+  const [{ sections }, pages, { t }] = await Promise.all([
     getPublicSiteContext(),
-    getPublicPageVisibility()
+    getPublicPageVisibility(),
+    getServerTranslations()
   ]);
 
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Pages</h1>
+        <h1>{t("admin.common.pages")}</h1>
       </div>
       <PageVisibilitySettings pages={pages} />
       <div className="admin-panel">
-        <h2>Visual Builder</h2>
-        <p className="message">Edit website layout directly with draggable blocks, preview, draft save, and publish.</p>
+        <h2>{t("admin.pages.visualBuilder")}</h2>
+        <p className="message">{t("admin.pages.visualBuilderDescription")}</p>
         <div className="form-actions">
           <Link className="button" href="/admin/page-builder/home">
-            Edit Homepage
+            {t("admin.common.editHomepage")}
           </Link>
           <Link className="button secondary" href="/">
-            View Homepage
+            {t("admin.common.viewHomepage")}
           </Link>
         </div>
       </div>
       <div className="admin-panel">
-        <h2>Homepage Sections</h2>
+        <h2>{t("admin.pages.homepageSections")}</h2>
         <table className="table">
           <thead>
             <tr>
-              <th>Order</th>
-              <th>Type</th>
-              <th>Visible</th>
+              <th>{t("admin.common.order")}</th>
+              <th>{t("admin.common.type")}</th>
+              <th>{t("admin.common.visible")}</th>
             </tr>
           </thead>
           <tbody>
@@ -44,7 +46,7 @@ export default async function AdminPagesPage() {
                 <td>{section.sortOrder}</td>
                 <td>{section.type}</td>
                 <td>
-                  <span className="badge">{section.enabled ? "Yes" : "No"}</span>
+                  <span className="badge">{section.enabled ? t("admin.common.yes") : t("admin.common.no")}</span>
                 </td>
               </tr>
             ))}

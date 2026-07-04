@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { FooterPartnerTableActions } from "@/components/admin/FooterPartnerTableActions";
 import { prisma } from "@/lib/db";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 async function getFooterPartners() {
   try {
@@ -14,27 +15,27 @@ async function getFooterPartners() {
 }
 
 export default async function AdminFooterPage() {
-  const partners = await getFooterPartners();
+  const [partners, { t }] = await Promise.all([getFooterPartners(), getServerTranslations()]);
 
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Footer</h1>
+        <h1>{t("admin.common.footer")}</h1>
         <Link className="button" href="/admin/footer/new">
-          New
+          {t("admin.common.new")}
         </Link>
       </div>
       <div className="admin-panel">
-        <h2>Collaborating Companies</h2>
+        <h2>{t("admin.common.collaboratingCompanies")}</h2>
         <table className="table">
           <thead>
             <tr>
-              <th>Logo</th>
-              <th>Company</th>
-              <th>Website</th>
-              <th>Sort</th>
-              <th>Visible</th>
-              <th>Actions</th>
+              <th>{t("admin.common.logo")}</th>
+              <th>{t("admin.common.company")}</th>
+              <th>{t("admin.common.website")}</th>
+              <th>{t("admin.common.sort")}</th>
+              <th>{t("admin.common.visible")}</th>
+              <th>{t("admin.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -50,7 +51,7 @@ export default async function AdminFooterPage() {
                 <td>{partner.websiteUrl ? <a href={partner.websiteUrl}>{partner.websiteUrl}</a> : ""}</td>
                 <td>{partner.sortOrder}</td>
                 <td>
-                  <span className="badge">{partner.isVisible ? "Yes" : "No"}</span>
+                  <span className="badge">{partner.isVisible ? t("admin.common.yes") : t("admin.common.no")}</span>
                 </td>
                 <td>
                   <FooterPartnerTableActions
@@ -63,7 +64,7 @@ export default async function AdminFooterPage() {
             ))}
             {partners.length === 0 ? (
               <tr>
-                <td colSpan={6}>No footer collaborators yet.</td>
+                <td colSpan={6}>{t("admin.empty.footer")}</td>
               </tr>
             ) : null}
           </tbody>

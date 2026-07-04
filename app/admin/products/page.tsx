@@ -2,70 +2,68 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ProductTableActions } from "@/components/admin/ProductTableActions";
 import { prisma } from "@/lib/db";
+import { localizedField } from "@/lib/i18n/content";
+import { getServerTranslations } from "@/lib/i18n/server";
+
+export const dynamic = "force-dynamic";
 
 async function getProducts() {
-  try {
-    return await prisma.product.findMany({ orderBy: { createdAt: "desc" } });
-  } catch {
-    return [];
-  }
+  return prisma.product.findMany({ orderBy: { createdAt: "desc" } });
 }
 
 export default async function AdminProductsPage() {
-  const products = await getProducts();
+  const [products, { language, t }] = await Promise.all([getProducts(), getServerTranslations()]);
 
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Products</h1>
+        <h1>{t("admin.common.products")}</h1>
         <Link className="button" href="/admin/products/new">
-          New
+          {t("admin.common.new")}
         </Link>
       </div>
       <div className="admin-panel">
         <table className="table">
           <thead>
             <tr>
-              <th>Image</th>
-              <th>Name</th>
-              <th>Slug</th>
-              <th>Status</th>
-              <th>Images</th>
-              <th>Actions</th>
+              <th>{t("admin.common.image")}</th>
+              <th>{t("admin.common.name")}</th>
+              <th>{t("admin.common.slug")}</th>
+              <th>{t("admin.common.status")}</th>
+              <th>{t("admin.common.images")}</th>
+              <th>{t("admin.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
-              <tr key={product.slug}>
-                <td>
-                  {product.imageId ? (
-                    <div className="table-thumb">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`/api/media/${product.imageId}`} alt="" />
-                    </div>
-                  ) : (
-                    "None"
-                  )}
-                </td>
-                <td>{product.name}</td>
-                <td>{product.slug}</td>
-                <td>
-                  <span className="badge">{product.status}</span>
-                </td>
-                <td>{getGalleryIds(product.gallery).length}</td>
-                <td>
-                  <ProductTableActions
-                    id={product.id}
-                    slug={product.slug}
-                    title={product.name}
-                    status={product.status}
-                  />
-                </td>
-              </tr>
-            ))}
+            {products.map((product) => {
+              const name = localizedField(product, "name", language);
+              return (
+                <tr key={product.slug}>
+                  <td>
+                    {product.imageId ? (
+                      <div className="table-thumb">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`/api/media/${product.imageId}`} alt="" />
+                      </div>
+                    ) : (
+                      t("admin.common.none")
+                    )}
+                  </td>
+                  <td>{name}</td>
+                  <td>{product.slug}</td>
+                  <td>
+                    <span className="badge">{t(`admin.status.${product.status}`)}</span>
+                  </td>
+                  <td>{getGalleryIds(product.gallery).length}</td>
+                  <td>
+                    <ProductTableActions id={product.id} slug={product.slug} title={name} status={product.status} />
+                  </td>
+                </tr>
+              );
+            })}
             {products.length === 0 ? (
               <tr>
-                <td colSpan={6}>No products yet.</td>
+                <td colSpan={6}>{t("admin.empty.products")}</td>
               </tr>
             ) : null}
           </tbody>

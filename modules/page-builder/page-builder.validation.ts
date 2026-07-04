@@ -99,7 +99,7 @@ const blockSchema = z.object({
   autoScroll: z.boolean().optional(),
   autoScrollSpeed: z.coerce.number().min(0).max(240).optional(),
   titleLinkEnabled: z.boolean().optional(),
-  titleLinkUrl: z.string().max(500).optional()
+  titleLinkUrl: publicUrlSchema.optional()
 });
 
 export const pageBuilderSaveSchema = z.object({

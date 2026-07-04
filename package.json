@@ -49,11 +49,5 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
-  },
-  "pnpm": {
-    "overrides": {
-      "brace-expansion": "^5.0.6",
-      "postcss": "^8.5.14"
-    }
   }
 }

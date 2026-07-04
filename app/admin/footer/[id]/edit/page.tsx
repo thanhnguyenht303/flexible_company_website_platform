@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { FooterPartnerForm } from "@/components/admin/FooterPartnerForm";
 import { prisma } from "@/lib/db";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 async function getFooterPartner(id: string) {
   try {
@@ -14,15 +15,15 @@ async function getFooterPartner(id: string) {
 
 export default async function EditFooterPartnerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const partner = await getFooterPartner(id);
+  const [partner, { t }] = await Promise.all([getFooterPartner(id), getServerTranslations()]);
   if (!partner) notFound();
 
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Edit Footer Collaborator</h1>
+        <h1>{t("admin.pageTitles.editFooterCollaborator")}</h1>
         <Link className="button secondary" href="/admin/footer">
-          Back
+          {t("admin.common.back")}
         </Link>
       </div>
       <FooterPartnerForm

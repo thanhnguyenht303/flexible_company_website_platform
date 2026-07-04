@@ -44,9 +44,12 @@ export async function POST(request: Request) {
   let post = await prisma.post.create({
     data: {
       title: input.title,
+      titleVi: input.titleVi || null,
       slug: input.slug,
       excerpt: input.excerpt || null,
+      excerptVi: input.excerptVi || null,
       content: input.content,
+      contentVi: input.contentVi || null,
       status: input.status as PublishStatus,
       tagNames: [],
       publishedAt: input.status === PublishStatus.PUBLISHED ? new Date() : null
@@ -117,9 +120,12 @@ async function parsePostRequest(request: Request) {
     return {
       fields: {
         title: stringField(formData.get("title")),
+        titleVi: stringField(formData.get("titleVi")),
         slug: stringField(formData.get("slug")),
         excerpt: stringField(formData.get("excerpt")),
+        excerptVi: stringField(formData.get("excerptVi")),
         content: stringField(formData.get("content")),
+        contentVi: stringField(formData.get("contentVi")),
         status: stringField(formData.get("status")) || "DRAFT"
       },
       image: imageValue instanceof File && imageValue.size > 0 ? imageValue : null,

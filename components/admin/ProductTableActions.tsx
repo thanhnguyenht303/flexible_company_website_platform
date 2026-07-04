@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Edit, ExternalLink, Trash2 } from "lucide-react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type ProductStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
@@ -16,6 +17,7 @@ type ProductTableActionsProps = {
 
 export function ProductTableActions({ id, slug, title, status }: ProductTableActionsProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -33,7 +35,7 @@ export function ProductTableActions({ id, slug, title, status }: ProductTableAct
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      setMessage(body?.error?.message ?? "Status update failed.");
+      setMessage(body?.error?.message ?? t("admin.messages.statusFailed"));
       return;
     }
 
@@ -41,7 +43,7 @@ export function ProductTableActions({ id, slug, title, status }: ProductTableAct
   }
 
   async function deleteProduct() {
-    const confirmed = window.confirm(`Delete "${title}"? This will also delete its images.`);
+    const confirmed = window.confirm(t("admin.confirm.deleteProduct", { title }));
     if (!confirmed) return;
 
     setBusy(true);
@@ -52,7 +54,7 @@ export function ProductTableActions({ id, slug, title, status }: ProductTableAct
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      setMessage(body?.error?.message ?? "Delete failed.");
+      setMessage(body?.error?.message ?? t("admin.messages.deleteFailed"));
       return;
     }
 
@@ -62,19 +64,19 @@ export function ProductTableActions({ id, slug, title, status }: ProductTableAct
   return (
     <div className="row-actions">
       <select
-        aria-label={`Status for ${title}`}
+        aria-label={t("admin.actions.statusFor", { title })}
         value={status}
         disabled={busy}
         onChange={(event) => updateStatus(event.target.value as ProductStatus)}
       >
-        <option value="DRAFT">Draft</option>
-        <option value="PUBLISHED">Published</option>
-        <option value="ARCHIVED">Archived</option>
+        <option value="DRAFT">{t("admin.status.DRAFT")}</option>
+        <option value="PUBLISHED">{t("admin.status.PUBLISHED")}</option>
+        <option value="ARCHIVED">{t("admin.status.ARCHIVED")}</option>
       </select>
-      <Link className="icon-button secondary" href={`/admin/products/${id}/edit`} title="Edit product">
+      <Link className="icon-button secondary" href={`/admin/products/${id}/edit`} title={t("admin.actions.editProduct")}>
         <Edit size={17} />
       </Link>
-      <Link className="icon-button secondary" href={`/products/${slug}`} title="View public product">
+      <Link className="icon-button secondary" href={`/products/${slug}`} title={t("admin.actions.viewProduct")}>
         <ExternalLink size={17} />
       </Link>
       <button
@@ -82,7 +84,7 @@ export function ProductTableActions({ id, slug, title, status }: ProductTableAct
         type="button"
         disabled={busy}
         onClick={deleteProduct}
-        title="Delete product"
+        title={t("admin.actions.deleteProduct")}
       >
         <Trash2 size={17} />
       </button>

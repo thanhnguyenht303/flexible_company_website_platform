@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { JobPostingForm } from "@/components/admin/JobPostingForm";
 import { prisma } from "@/lib/db";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 async function getJob(id: string) {
   try {
@@ -14,15 +15,15 @@ async function getJob(id: string) {
 
 export default async function EditJobPostingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const job = await getJob(id);
+  const [job, { t }] = await Promise.all([getJob(id), getServerTranslations()]);
   if (!job) notFound();
 
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Edit Job</h1>
+        <h1>{t("admin.pageTitles.editJob")}</h1>
         <Link className="button secondary" href="/admin/careers">
-          Back
+          {t("admin.common.back")}
         </Link>
       </div>
       <JobPostingForm job={job} />

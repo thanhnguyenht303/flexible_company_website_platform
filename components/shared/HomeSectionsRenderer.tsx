@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { HeroBuilderVisual } from "@/components/public/HeroBuilderVisual";
+import { defaultLanguage, translate, type Language } from "@/lib/i18n/translations";
 
 type HomeSectionsRendererProps = {
   sections: Array<{
@@ -32,9 +33,10 @@ type HomeSectionsRendererProps = {
     featuredImageId?: string | null;
   }>;
   visiblePages: Set<string>;
+  language?: Language;
 };
 
-export function HomeSectionsRenderer({ sections, site, services, products, posts, visiblePages }: HomeSectionsRendererProps) {
+export function HomeSectionsRenderer({ sections, site, services, products, posts, visiblePages, language = defaultLanguage }: HomeSectionsRendererProps) {
   return (
     <>
       {sections
@@ -48,6 +50,7 @@ export function HomeSectionsRenderer({ sections, site, services, products, posts
             products={products}
             posts={posts}
             visiblePages={visiblePages}
+            language={language}
           />
         ))}
     </>
@@ -60,7 +63,8 @@ function HomeSection({
   services,
   products,
   posts,
-  visiblePages
+  visiblePages,
+  language = defaultLanguage
 }: Omit<HomeSectionsRendererProps, "sections"> & { section: HomeSectionsRendererProps["sections"][number] }) {
   const settings = normalizeSettings(section.settings);
 
@@ -80,12 +84,12 @@ function HomeSection({
                 ) : null}
                 {visiblePages.has("services") ? (
                   <Link className="button secondary" href="/services">
-                    View Services
+                    {translate(language, "builder.defaults.allServices")}
                   </Link>
                 ) : null}
               </div>
             </div>
-            <HeroBuilderVisual />
+            <HeroBuilderVisual language={language} />
           </div>
         </section>
       );
@@ -94,7 +98,7 @@ function HomeSection({
       return (
         <section className="section">
           <div className="container">
-            <SectionHeader title={stringValue(settings.title) || "Services"} text="Published service records appear here and can be managed from the admin dashboard." href="/services" linkText="All Services" />
+            <SectionHeader title={stringValue(settings.title) || translate(language, "builder.defaults.servicesTitle")} text={translate(language, "builder.defaults.servicesText")} href="/services" linkText={translate(language, "builder.defaults.allServices")} />
             <ContentGrid items={services.slice(0, numberValue(settings.limit, 3))} hrefPrefix="/services" />
           </div>
         </section>
@@ -104,7 +108,7 @@ function HomeSection({
       return (
         <section className="section alt">
           <div className="container">
-            <SectionHeader title={stringValue(settings.title) || "Products"} text="Use the products module for catalogs, brochures, technical specs, and lead capture." href="/products" linkText="All Products" />
+            <SectionHeader title={stringValue(settings.title) || translate(language, "builder.defaults.productsTitle")} text={translate(language, "builder.defaults.productsText")} href="/products" linkText={translate(language, "builder.defaults.allProducts")} />
             <ContentGrid items={products.slice(0, numberValue(settings.limit, 3))} hrefPrefix="/products" />
           </div>
         </section>
@@ -114,7 +118,7 @@ function HomeSection({
       return (
         <section className="section alt">
           <div className="container">
-            <SectionHeader title={stringValue(settings.title) || "Blog"} text="Published posts use the same SEO and visibility rules as products and services." href="/blog" linkText="All Posts" />
+            <SectionHeader title={stringValue(settings.title) || translate(language, "builder.defaults.blogTitle")} text={translate(language, "builder.defaults.blogText")} href="/blog" linkText={translate(language, "builder.defaults.allPosts")} />
             <ContentGrid items={posts.slice(0, numberValue(settings.limit, 3))} hrefPrefix="/blog" />
           </div>
         </section>
@@ -125,10 +129,10 @@ function HomeSection({
         <section className="section">
           <div className="container">
             <div className="builder-banner builder-public-block--center">
-              <h2>{stringValue(settings.title) || "Ready to work with us?"}</h2>
-              <p>{stringValue(settings.subtitle) || "Send us a message and our team will respond soon."}</p>
+              <h2>{stringValue(settings.title) || translate(language, "builder.defaults.contactTitle")}</h2>
+              <p>{stringValue(settings.subtitle) || translate(language, "builder.defaults.contactText")}</p>
               <Link className="button" href={stringValue(settings.buttonUrl) || "/contact"}>
-                {stringValue(settings.buttonText) || "Get in Touch"}
+                {stringValue(settings.buttonText) || translate(language, "builder.defaults.getInTouch")}
               </Link>
             </div>
           </div>
@@ -139,10 +143,15 @@ function HomeSection({
         <section className="section">
           <div className="container">
             <div className="stat-grid">
-              {["Theme variables", "Role permissions", "Upload rules", "Audit logs"].map((label) => (
+              {[
+                translate(language, "builder.defaults.statTheme"),
+                translate(language, "builder.defaults.statPermissions"),
+                translate(language, "builder.defaults.statUploads"),
+                translate(language, "builder.defaults.statAudit")
+              ].map((label) => (
                 <div className="stat" key={label}>
                   <CheckCircle2 color="var(--color-primary)" />
-                  <strong>Ready</strong>
+                  <strong>{translate(language, "builder.ready")}</strong>
                   <span>{label}</span>
                 </div>
               ))}

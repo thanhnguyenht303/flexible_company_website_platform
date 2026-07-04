@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { JobPostingTableActions } from "@/components/admin/JobPostingTableActions";
 import { prisma } from "@/lib/db";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 async function getJobs() {
   try {
@@ -21,27 +22,27 @@ async function getJobs() {
 }
 
 export default async function AdminCareersPage() {
-  const jobs = await getJobs();
+  const [jobs, { t }] = await Promise.all([getJobs(), getServerTranslations()]);
 
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Careers</h1>
+        <h1>{t("admin.common.careers")}</h1>
         <Link className="button" href="/admin/careers/new">
-          New
+          {t("admin.common.new")}
         </Link>
       </div>
       <div className="admin-panel">
         <table className="table">
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Department</th>
-              <th>Location</th>
-              <th>Status</th>
-              <th>Applications</th>
-              <th>Published</th>
-              <th>Actions</th>
+              <th>{t("admin.common.title")}</th>
+              <th>{t("admin.common.department")}</th>
+              <th>{t("admin.common.location")}</th>
+              <th>{t("admin.common.status")}</th>
+              <th>{t("admin.common.applications")}</th>
+              <th>{t("admin.common.published")}</th>
+              <th>{t("admin.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -51,14 +52,17 @@ export default async function AdminCareersPage() {
                 <td>{job.department}</td>
                 <td>{job.location}</td>
                 <td>
-                  <span className="badge">{job.status}</span>
+                  <span className="badge">{t(`admin.status.${job.status}`)}</span>
                 </td>
                 <td>
                   <Link href={`/admin/careers/${job.id}/applications`}>
-                    {job._count.applications} application{job._count.applications === 1 ? "" : "s"}
+                    {job._count.applications}{" "}
+                    {job._count.applications === 1
+                      ? t("admin.common.applicationSingular")
+                      : t("admin.common.applicationPlural")}
                   </Link>
                 </td>
-                <td>{job.publishedAt ? job.publishedAt.toLocaleDateString() : "Not published"}</td>
+                <td>{job.publishedAt ? job.publishedAt.toLocaleDateString() : t("admin.common.notPublished")}</td>
                 <td>
                   <JobPostingTableActions id={job.id} slug={job.slug} title={job.title} status={job.status} />
                 </td>
@@ -66,7 +70,7 @@ export default async function AdminCareersPage() {
             ))}
             {jobs.length === 0 ? (
               <tr>
-                <td colSpan={7}>No job postings yet.</td>
+                <td colSpan={7}>{t("admin.empty.jobs")}</td>
               </tr>
             ) : null}
           </tbody>

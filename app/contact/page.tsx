@@ -1,13 +1,15 @@
 import { notFound } from "next/navigation";
 import { ContactForm } from "@/components/public/ContactForm";
 import { PublicShell } from "@/components/public/PublicShell";
+import { getCurrentLanguage } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/translations";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
 export default async function ContactPage() {
   if (!(await isPublicPageVisible("contact"))) notFound();
 
-  const { site } = await getPublicSiteContext();
+  const [{ site }, language] = await Promise.all([getPublicSiteContext(), getCurrentLanguage()]);
 
   return (
     <PublicShell>
@@ -15,8 +17,12 @@ export default async function ContactPage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <h2>Contact</h2>
-              <p>{site.email ? `Email ${site.email}` : "Send a message to the company team."}</p>
+              <h2>{translate(language, "pages.contact.title")}</h2>
+              <p>
+                {site.email
+                  ? translate(language, "pages.contact.emailLead", { email: site.email })
+                  : translate(language, "pages.contact.description")}
+              </p>
             </div>
           </div>
           <div className="grid">

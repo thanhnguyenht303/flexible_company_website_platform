@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Send } from "lucide-react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type JobApplicationFormProps = {
   jobId: string;
@@ -14,6 +15,7 @@ type State = {
 };
 
 export function JobApplicationForm({ jobId, jobTitle }: JobApplicationFormProps) {
+  const { t } = useLanguage();
   const [state, setState] = useState<State>({ status: "idle", message: "" });
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -29,46 +31,45 @@ export function JobApplicationForm({ jobId, jobTitle }: JobApplicationFormProps)
     });
 
     if (!response.ok) {
-      const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "The application could not be sent."
+        message: t("forms.job.error")
       });
       return;
     }
 
     form.reset();
-    setState({ status: "success", message: "Thanks. Your application has been received." });
+    setState({ status: "success", message: t("forms.job.success") });
   }
 
   return (
     <form className="admin-panel form-grid" onSubmit={onSubmit}>
-      <h2>Apply for {jobTitle}</h2>
+      <h2>{t("forms.job.applyFor", { jobTitle })}</h2>
       <div className="visually-hidden" aria-hidden="true">
-        <label htmlFor="application-website">Website</label>
+        <label htmlFor="application-website">{t("common.website")}</label>
         <input id="application-website" name="website" tabIndex={-1} autoComplete="off" />
       </div>
       <div className="field">
-        <label htmlFor="name">Name</label>
+        <label htmlFor="name">{t("common.name")}</label>
         <input id="name" name="name" required minLength={2} />
       </div>
       <div className="field">
-        <label htmlFor="email">Email</label>
+        <label htmlFor="email">{t("common.email")}</label>
         <input id="email" name="email" type="email" required />
       </div>
       <div className="field">
-        <label htmlFor="phone">Phone</label>
+        <label htmlFor="phone">{t("common.phone")}</label>
         <input id="phone" name="phone" />
       </div>
       <div className="field">
-        <label htmlFor="companyName">Current Company</label>
+        <label htmlFor="companyName">{t("forms.job.currentCompany")}</label>
         <input id="companyName" name="companyName" />
       </div>
       <div className="field">
-        <label htmlFor="resume">Resume</label>
+        <label htmlFor="resume">{t("forms.job.resume")}</label>
         <label className="file-dropbox" htmlFor="resume">
-          <span>Choose a resume file</span>
-          <small>PDF, DOC, or DOCX up to 10MB</small>
+          <span>{t("forms.job.chooseResume")}</span>
+          <small>{t("forms.job.resumeHelp")}</small>
           <input
             id="resume"
             name="resume"
@@ -79,12 +80,12 @@ export function JobApplicationForm({ jobId, jobTitle }: JobApplicationFormProps)
         </label>
       </div>
       <div className="field">
-        <label htmlFor="message">Short Note</label>
-        <textarea id="message" name="message" placeholder="Optional note, portfolio link, or LinkedIn profile." />
+        <label htmlFor="message">{t("forms.job.shortNote")}</label>
+        <textarea id="message" name="message" placeholder={t("forms.job.shortNotePlaceholder")} />
       </div>
       <button className="button" disabled={state.status === "submitting"} type="submit">
         <Send size={18} />
-        {state.status === "submitting" ? "Sending" : "Apply"}
+        {state.status === "submitting" ? t("common.sending") : t("common.apply")}
       </button>
       {state.message ? (
         <p className={`message ${state.status === "error" ? "error" : ""}`}>{state.message}</p>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Bold, Heading2, ImageIcon, Italic, List, ListOrdered, Quote, Save, Trash2 } from "lucide-react";
 import { ArticleContent } from "@/components/shared/ArticleContent";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type FormState = {
   status: "idle" | "saving" | "deleting" | "error";
@@ -17,9 +18,12 @@ const imageQuality = 0.82;
 type PostFormPost = {
   id: string;
   title: string;
+  titleVi: string | null;
   slug: string;
   excerpt: string | null;
+  excerptVi: string | null;
   content: string;
+  contentVi: string | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   featuredImageId: string | null;
 };
@@ -37,6 +41,7 @@ type InlineImage = {
 
 export function PostForm({ post }: PostFormProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [state, setState] = useState<FormState>({ status: "idle", message: "" });
   const [title, setTitle] = useState(post?.title ?? "");
   const [excerpt, setExcerpt] = useState(post?.excerpt ?? "");
@@ -59,7 +64,7 @@ export function PostForm({ post }: PostFormProps) {
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState({ status: "saving", message: "Optimizing image size before upload." });
+    setState({ status: "saving", message: t("admin.messages.postOptimize") });
 
     const payload = new FormData(event.currentTarget);
     const featuredImage = payload.get("featuredImage");
@@ -76,7 +81,7 @@ export function PostForm({ post }: PostFormProps) {
       payload.append("inlineImageAltTexts", image.altText);
     });
 
-    setState({ status: "saving", message: "Saving post." });
+    setState({ status: "saving", message: t("admin.messages.postSaving") });
 
     const response = await fetch(isEditing ? `/api/admin/posts/${post?.id}` : "/api/admin/posts", {
       method: isEditing ? "PATCH" : "POST",
@@ -87,7 +92,7 @@ export function PostForm({ post }: PostFormProps) {
       const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "Post could not be saved."
+        message: body?.error?.message ?? t("admin.messages.postSaveFailed")
       });
       return;
     }
@@ -110,17 +115,17 @@ export function PostForm({ post }: PostFormProps) {
 
     const inserted =
       kind === "bold"
-        ? `**${selected || "bold text"}**`
+        ? `**${selected || t("admin.forms.editor.boldText")}**`
         : kind === "italic"
-          ? `*${selected || "italic text"}*`
+          ? `*${selected || t("admin.forms.editor.italicText")}*`
           : kind === "heading"
-        ? `## ${selected || "Section heading"}`
+        ? `## ${selected || t("admin.forms.editor.sectionHeading")}`
         : kind === "quote"
-          ? `> ${selected || "A memorable line or customer insight."}`
+          ? `> ${selected || t("admin.forms.editor.quoteText")}`
           : kind === "ul"
-            ? `- ${selected || "List item"}`
+            ? `- ${selected || t("admin.forms.editor.listItem")}`
             : kind === "ol"
-              ? `1. ${selected || "List item"}`
+              ? `1. ${selected || t("admin.forms.editor.listItem")}`
               : "---";
 
     const nextContent = `${prefix}${needsLeadingBreak}${inserted}${needsTrailingBreak}${suffix}`;
@@ -142,7 +147,7 @@ export function PostForm({ post }: PostFormProps) {
     const selected = content.slice(start, end).trim();
     const prefix = content.slice(0, start);
     const suffix = content.slice(end);
-    const inserted = `{${size}:${selected || "sized text"}}`;
+    const inserted = `{${size}:${selected || t("admin.forms.editor.sizedText")}}`;
     const nextContent = `${prefix}${inserted}${suffix}`;
     setContent(nextContent);
 
@@ -158,10 +163,10 @@ export function PostForm({ post }: PostFormProps) {
     event.target.value = "";
     if (!file) return;
 
-    setState({ status: "saving", message: "Preparing inline image." });
+    setState({ status: "saving", message: t("admin.messages.postPreparingInline") });
     const optimizedImage = await optimizeImageForUpload(file).catch(() => file);
     const token = `inline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    const altText = getImageAltText(file.name);
+    const altText = getImageAltText(file.name, t);
     const previewUrl = URL.createObjectURL(optimizedImage);
 
     setInlineImages((current) => [...current, { token, file: optimizedImage, previewUrl, altText }]);
@@ -194,7 +199,7 @@ export function PostForm({ post }: PostFormProps) {
 
   async function onDelete() {
     if (!post) return;
-    const confirmed = window.confirm(`Delete "${post.title}"? This cannot be undone.`);
+    const confirmed = window.confirm(t("admin.confirm.deletePost", { title: post.title }));
     if (!confirmed) return;
 
     setState({ status: "deleting", message: "" });
@@ -204,7 +209,7 @@ export function PostForm({ post }: PostFormProps) {
       const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "Post could not be deleted."
+        message: body?.error?.message ?? t("admin.messages.postDeleteFailed")
       });
       return;
     }
@@ -219,35 +224,35 @@ export function PostForm({ post }: PostFormProps) {
         <main className="post-writing-surface">
           <input
             className="post-title-input"
-            aria-label="Post title"
+            aria-label={t("admin.forms.editor.titleLabel")}
             name="title"
             required
             minLength={2}
             maxLength={180}
-            placeholder="Title"
+            placeholder={t("admin.forms.labels.title")}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
           <textarea
             className="post-subtitle-input"
-            aria-label="Post subtitle"
+            aria-label={t("admin.forms.editor.subtitleLabel")}
             name="excerpt"
             maxLength={320}
-            placeholder="Tell readers what this story is about"
+            placeholder={t("admin.forms.placeholders.articleSubtitle")}
             value={excerpt}
             onChange={(event) => setExcerpt(event.target.value)}
           />
-          <div className="post-editor-toolbar" aria-label="Article formatting">
+          <div className="post-editor-toolbar" aria-label={t("admin.forms.editor.formatting")}>
             <button type="button" onClick={() => insertArticleSyntax("bold")}>
               <Bold size={17} />
-              Bold
+              {t("admin.forms.editor.bold")}
             </button>
             <button type="button" onClick={() => insertArticleSyntax("italic")}>
               <Italic size={17} />
-              Italic
+              {t("admin.forms.editor.italic")}
             </button>
             <select
-              aria-label="Text size"
+              aria-label={t("admin.forms.editor.textSize")}
               defaultValue=""
               onChange={(event) => {
                 const value = event.target.value;
@@ -258,34 +263,34 @@ export function PostForm({ post }: PostFormProps) {
               }}
             >
               <option value="" disabled>
-                Size
+                {t("admin.forms.editor.size")}
               </option>
-              <option value="small">Small</option>
-              <option value="large">Large</option>
-              <option value="xl">Extra large</option>
+              <option value="small">{t("admin.forms.editor.small")}</option>
+              <option value="large">{t("admin.forms.editor.large")}</option>
+              <option value="xl">{t("admin.forms.editor.extraLarge")}</option>
             </select>
             <button type="button" onClick={() => insertArticleSyntax("heading")}>
               <Heading2 size={17} />
-              Heading
+              {t("admin.forms.editor.heading")}
             </button>
             <button type="button" onClick={() => insertArticleSyntax("quote")}>
               <Quote size={17} />
-              Quote
+              {t("admin.forms.editor.quote")}
             </button>
             <button type="button" onClick={() => insertArticleSyntax("ul")}>
               <List size={17} />
-              List
+              {t("admin.forms.editor.list")}
             </button>
             <button type="button" onClick={() => insertArticleSyntax("ol")}>
               <ListOrdered size={17} />
-              Steps
+              {t("admin.forms.editor.steps")}
             </button>
             <button type="button" onClick={() => insertArticleSyntax("divider")}>
-              Divider
+              {t("admin.forms.editor.divider")}
             </button>
             <button type="button" onClick={() => inlineImageInputRef.current?.click()}>
               <ImageIcon size={17} />
-              Image
+              {t("admin.forms.editor.image")}
             </button>
           </div>
           <input
@@ -298,42 +303,62 @@ export function PostForm({ post }: PostFormProps) {
           <textarea
             ref={contentRef}
             className="post-content-input"
-            aria-label="Article body"
+            aria-label={t("admin.forms.editor.bodyLabel")}
             name="content"
             required
             minLength={20}
-            placeholder="Write your article. Use ## for section headings, > for quotes, - for lists, and blank lines between paragraphs."
+            placeholder={t("admin.forms.placeholders.articleBody")}
             value={content}
             onChange={(event) => setContent(event.target.value)}
           />
           <div className="post-editor-stats">
-            <span>{getWordCount(content)} words</span>
-            <span>{getReadingTime(content)} min read</span>
+            <span>{getWordCount(content)} {t("admin.forms.editor.words")}</span>
+            <span>{getReadingTime(content)} {t("common.minRead")}</span>
           </div>
+          <section className="admin-panel form-grid translation-fields">
+            <h2>{t("admin.forms.editor.vietnameseTranslation")}</h2>
+            <div className="field">
+              <label htmlFor="titleVi">{t("admin.forms.labels.titleVi")}</label>
+              <input id="titleVi" name="titleVi" maxLength={180} defaultValue={post?.titleVi ?? ""} />
+            </div>
+            <div className="field">
+              <label htmlFor="excerptVi">{t("admin.forms.labels.subtitleVi")}</label>
+              <textarea id="excerptVi" name="excerptVi" maxLength={320} defaultValue={post?.excerptVi ?? ""} />
+            </div>
+            <div className="field">
+              <label htmlFor="contentVi">{t("admin.forms.labels.articleBodyVi")}</label>
+              <textarea
+                id="contentVi"
+                name="contentVi"
+                placeholder={t("admin.forms.placeholders.articleBodyVi")}
+                defaultValue={post?.contentVi ?? ""}
+              />
+            </div>
+          </section>
         </main>
 
         <aside className="post-editor-side">
           <div className="admin-panel form-grid">
             <div className="field">
-              <label htmlFor="slug">Slug</label>
+              <label htmlFor="slug">{t("admin.forms.labels.slug")}</label>
               <input
                 id="slug"
                 name="slug"
-                placeholder="auto-generated from title if blank"
+                placeholder={t("admin.forms.placeholders.autoSlug")}
                 maxLength={220}
                 defaultValue={post?.slug ?? ""}
               />
             </div>
             <div className="field">
-              <label htmlFor="status">Status</label>
+              <label htmlFor="status">{t("admin.forms.labels.status")}</label>
               <select id="status" name="status" defaultValue={post?.status ?? "DRAFT"}>
-                <option value="DRAFT">Draft</option>
-                <option value="PUBLISHED">Published</option>
-                <option value="ARCHIVED">Archived</option>
+                <option value="DRAFT">{t("admin.status.DRAFT")}</option>
+                <option value="PUBLISHED">{t("admin.status.PUBLISHED")}</option>
+                <option value="ARCHIVED">{t("admin.status.ARCHIVED")}</option>
               </select>
             </div>
             <div className="field">
-              <label htmlFor="featuredImage">Cover Image</label>
+              <label htmlFor="featuredImage">{t("admin.forms.editor.image")}</label>
               {post?.featuredImageId ? (
                 <div className="image-preview">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -346,12 +371,12 @@ export function PostForm({ post }: PostFormProps) {
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
               />
-              <p className="field-help">Recommended: 1600 x 900px. This becomes the article cover image.</p>
+              <p className="field-help">{t("admin.forms.help.coverImage")}</p>
             </div>
             <div className="form-actions">
               <button className="button" type="submit" disabled={state.status === "saving"}>
                 <Save size={18} />
-                {state.status === "saving" ? "Saving" : "Save Article"}
+                {state.status === "saving" ? t("admin.common.saving") : t("admin.forms.buttons.saveArticle")}
               </button>
               {post ? (
                 <button
@@ -361,7 +386,7 @@ export function PostForm({ post }: PostFormProps) {
                   onClick={onDelete}
                 >
                   <Trash2 size={18} />
-                  {state.status === "deleting" ? "Deleting" : "Delete"}
+                  {state.status === "deleting" ? t("admin.common.deleting") : t("admin.common.delete")}
                 </button>
               ) : null}
             </div>
@@ -375,18 +400,18 @@ export function PostForm({ post }: PostFormProps) {
       {content.trim() || title.trim() || excerpt.trim() ? (
         <section className="post-preview-panel">
           <div className="article-header article-header--preview">
-            <div className="article-kicker">Preview</div>
-            <h1>{title || "Untitled article"}</h1>
+            <div className="article-kicker">{t("common.preview")}</div>
+            <h1>{title || t("admin.forms.editor.untitledArticle")}</h1>
             {excerpt ? <p className="article-deck">{excerpt}</p> : null}
             <div className="article-meta">
-              <span>Draft preview</span>
-              <span>{getReadingTime(content)} min read</span>
+              <span>{t("common.draftPreview")}</span>
+              <span>{getReadingTime(content)} {t("common.minRead")}</span>
             </div>
           </div>
           <div className="article-content-wrap article-content-wrap--preview">
             <ArticleContent
               content={getPreviewContent(
-                content || "Start writing above to see how the article will read on the public blog.",
+                content || t("admin.forms.editor.startWriting"),
                 inlineImages
               )}
             />
@@ -404,13 +429,13 @@ function getPreviewContent(content: string, inlineImages: InlineImage[]) {
   );
 }
 
-function getImageAltText(filename: string) {
+function getImageAltText(filename: string, t: (key: string) => string) {
   return (
     filename
       .replace(/\.[^.]+$/, "")
       .replace(/[-_]+/g, " ")
       .replace(/\s+/g, " ")
-      .trim() || "Article image"
+      .trim() || t("admin.forms.editor.articleImage")
   );
 }
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Edit, ExternalLink, Trash2 } from "lucide-react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type ServiceStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
@@ -16,6 +17,7 @@ type ServiceTableActionsProps = {
 
 export function ServiceTableActions({ id, slug, title, status }: ServiceTableActionsProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -33,7 +35,7 @@ export function ServiceTableActions({ id, slug, title, status }: ServiceTableAct
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      setMessage(body?.error?.message ?? "Status update failed.");
+      setMessage(body?.error?.message ?? t("admin.messages.statusFailed"));
       return;
     }
 
@@ -41,7 +43,7 @@ export function ServiceTableActions({ id, slug, title, status }: ServiceTableAct
   }
 
   async function deleteService() {
-    const confirmed = window.confirm(`Delete "${title}"? This will also delete its images.`);
+    const confirmed = window.confirm(t("admin.confirm.deleteService", { title }));
     if (!confirmed) return;
 
     setBusy(true);
@@ -52,7 +54,7 @@ export function ServiceTableActions({ id, slug, title, status }: ServiceTableAct
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      setMessage(body?.error?.message ?? "Delete failed.");
+      setMessage(body?.error?.message ?? t("admin.messages.deleteFailed"));
       return;
     }
 
@@ -62,19 +64,19 @@ export function ServiceTableActions({ id, slug, title, status }: ServiceTableAct
   return (
     <div className="row-actions">
       <select
-        aria-label={`Status for ${title}`}
+        aria-label={t("admin.actions.statusFor", { title })}
         value={status}
         disabled={busy}
         onChange={(event) => updateStatus(event.target.value as ServiceStatus)}
       >
-        <option value="DRAFT">Draft</option>
-        <option value="PUBLISHED">Published</option>
-        <option value="ARCHIVED">Archived</option>
+        <option value="DRAFT">{t("admin.status.DRAFT")}</option>
+        <option value="PUBLISHED">{t("admin.status.PUBLISHED")}</option>
+        <option value="ARCHIVED">{t("admin.status.ARCHIVED")}</option>
       </select>
-      <Link className="icon-button secondary" href={`/admin/services/${id}/edit`} title="Edit service">
+      <Link className="icon-button secondary" href={`/admin/services/${id}/edit`} title={t("admin.actions.editService")}>
         <Edit size={17} />
       </Link>
-      <Link className="icon-button secondary" href={`/services/${slug}`} title="View public service">
+      <Link className="icon-button secondary" href={`/services/${slug}`} title={t("admin.actions.viewService")}>
         <ExternalLink size={17} />
       </Link>
       <button
@@ -82,7 +84,7 @@ export function ServiceTableActions({ id, slug, title, status }: ServiceTableAct
         type="button"
         disabled={busy}
         onClick={deleteService}
-        title="Delete service"
+        title={t("admin.actions.deleteService")}
       >
         <Trash2 size={17} />
       </button>

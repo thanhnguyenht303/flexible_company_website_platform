@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ServiceReviewForm } from "@/components/public/ServiceReviewForm";
 import { prisma } from "@/lib/db";
+import { localizeService } from "@/lib/i18n/content";
+import { getCurrentLanguage } from "@/lib/i18n/server";
+import { translate, type Language } from "@/lib/i18n/translations";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
@@ -9,12 +12,14 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
   const { slug } = await params;
   if (!(await isPublicPageVisible("services"))) notFound();
 
-  const { services } = await getPublicSiteContext();
-  const service = services.find((item) => item.slug === slug);
-  if (!service) notFound();
+  const [{ services }, language] = await Promise.all([getPublicSiteContext(), getCurrentLanguage()]);
+  const serviceRecord = services.find((item) => item.slug === slug);
+  if (!serviceRecord) notFound();
+  const service = localizeService(serviceRecord, language);
   const galleryIds = "gallery" in service ? getGalleryIds(service.gallery) : [];
   const reviews = "id" in service ? await getServiceReviews(service.id) : [];
   const averageRating = getAverageRating(reviews);
+  const reviewLabel = reviews.length === 1 ? translate(language, "reviews.reviewSingular") : translate(language, "reviews.reviewPlural");
 
   return (
     <PublicShell>
@@ -53,11 +58,15 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
         <div className="container">
           <div className="section-header">
             <div>
-              <h2>Customer Reviews</h2>
+              <h2>{translate(language, "reviews.title")}</h2>
               <p>
                 {reviews.length
-                  ? `${averageRating.toFixed(1)} out of 5 from ${reviews.length} review${reviews.length === 1 ? "" : "s"}.`
-                  : "Be the first customer to share your experience with this service."}
+                  ? translate(language, "reviews.summary", {
+                      rating: averageRating.toFixed(1),
+                      count: reviews.length,
+                      reviewLabel
+                    })
+                  : translate(language, "reviews.emptyLead")}
               </p>
             </div>
           </div>
@@ -67,9 +76,9 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                 <article className="review-card" key={review.id}>
                   <div>
                     <strong>{review.name}</strong>
-                    <span>{formatDate(review.createdAt)}</span>
+                    <span>{formatDate(review.createdAt, language)}</span>
                   </div>
-                  <div className="stars" aria-label={`${review.rating} out of 5 stars`}>
+                  <div className="stars" aria-label={translate(language, "reviews.starsLabel", { rating: review.rating })}>
                     {"★".repeat(review.rating)}
                     {"☆".repeat(5 - review.rating)}
                   </div>
@@ -78,7 +87,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
               ))}
               {reviews.length === 0 ? (
                 <div className="card">
-                  <p>No reviews yet.</p>
+                  <p>{translate(language, "reviews.empty")}</p>
                 </div>
               ) : null}
             </div>
@@ -123,8 +132,8 @@ function getAverageRating(reviews: Array<{ rating: number }>) {
   return reviews.reduce((total, review) => total + review.rating, 0) / reviews.length;
 }
 
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en", {
+function formatDate(date: Date, language: Language) {
+  return new Intl.DateTimeFormat(language === "vi" ? "vi-VN" : "en", {
     month: "short",
     day: "numeric",
     year: "numeric"

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { getCurrentLanguage } from "@/lib/i18n/server";
 import { getThemeStyle, getPublicSiteContext } from "@/lib/public-data";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -26,10 +27,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const themeStyle = await getThemeStyle();
+  const [themeStyle, language] = await Promise.all([getThemeStyle(), getCurrentLanguage()]);
 
   return (
-    <html lang="en">
+    <html lang={language}>
       <body style={themeStyle}>{children}</body>
     </html>
   );

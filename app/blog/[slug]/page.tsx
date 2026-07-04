@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ArticleContent } from "@/components/shared/ArticleContent";
+import { localizePost } from "@/lib/i18n/content";
+import { getCurrentLanguage } from "@/lib/i18n/server";
+import { translate, type Language } from "@/lib/i18n/translations";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
@@ -8,21 +11,24 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
   const { slug } = await params;
   if (!(await isPublicPageVisible("blog"))) notFound();
 
-  const { posts } = await getPublicSiteContext();
-  const post = posts.find((item) => item.slug === slug);
-  if (!post) notFound();
+  const [{ posts }, language] = await Promise.all([getPublicSiteContext(), getCurrentLanguage()]);
+  const postRecord = posts.find((item) => item.slug === slug);
+  if (!postRecord) notFound();
+  const post = localizePost(postRecord, language);
   const publishedAt = "publishedAt" in post ? post.publishedAt : null;
 
   return (
     <PublicShell>
       <article className="article-page">
         <header className="article-header">
-          <div className="article-kicker">Article</div>
+          <div className="article-kicker">{translate(language, "common.article")}</div>
           <h1>{post.title}</h1>
           {post.excerpt ? <p className="article-deck">{post.excerpt}</p> : null}
           <div className="article-meta">
-            <span>{publishedAt ? formatArticleDate(publishedAt) : "Draft preview"}</span>
-            <span>{getReadingTime(post.content)} min read</span>
+            <span>{publishedAt ? formatArticleDate(publishedAt, language) : translate(language, "common.draftPreview")}</span>
+            <span>
+              {getReadingTime(post.content)} {translate(language, "common.minRead")}
+            </span>
           </div>
         </header>
         {"featuredImageId" in post && post.featuredImageId ? (
@@ -44,8 +50,8 @@ function getReadingTime(content: string) {
   return Math.max(1, Math.ceil(wordCount / 220));
 }
 
-function formatArticleDate(date: Date | string) {
-  return new Intl.DateTimeFormat("en", {
+function formatArticleDate(date: Date | string, language: Language) {
+  return new Intl.DateTimeFormat(language === "vi" ? "vi-VN" : "en", {
     month: "long",
     day: "numeric",
     year: "numeric"

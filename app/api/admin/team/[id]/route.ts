@@ -64,7 +64,9 @@ export async function PATCH(request: Request, { params }: Params) {
     data: {
       ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
       ...(parsed.data.position !== undefined ? { position: parsed.data.position || null } : {}),
+      ...(parsed.data.positionVi !== undefined ? { positionVi: parsed.data.positionVi || null } : {}),
       ...(parsed.data.bio !== undefined ? { bio: parsed.data.bio || null } : {}),
+      ...(parsed.data.bioVi !== undefined ? { bioVi: parsed.data.bioVi || null } : {}),
       ...(parsed.data.email !== undefined ? { email: parsed.data.email || null } : {}),
       ...(parsed.data.phone !== undefined ? { phone: parsed.data.phone || null } : {}),
       ...(parsed.data.sortOrder !== undefined ? { sortOrder: parsed.data.sortOrder } : {}),
@@ -113,7 +115,7 @@ async function parseTeamRequest(request: Request) {
     const photoValue = formData.get("photo");
     const fields: Record<string, string> = {};
 
-    for (const field of ["name", "position", "bio", "email", "phone", "sortOrder", "isVisible"]) {
+    for (const field of ["name", "position", "positionVi", "bio", "bioVi", "email", "phone", "sortOrder", "isVisible"]) {
       const value = formData.get(field);
       if (typeof value === "string") fields[field] = value;
     }

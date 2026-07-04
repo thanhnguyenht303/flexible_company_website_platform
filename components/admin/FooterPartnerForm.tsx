@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Save, Trash2 } from "lucide-react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type FooterPartnerFormPartner = {
   id: string;
@@ -47,6 +48,7 @@ const cropOutputHeight = 480;
 
 export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const isEditing = Boolean(partner);
   const [state, setState] = useState<FormState>({ status: "idle", message: "" });
   const [logoCrop, setLogoCrop] = useState<LogoCropState | null>(null);
@@ -60,18 +62,23 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState({ status: "saving", message: "Saving footer collaborator." });
+    setState({ status: "saving", message: t("admin.messages.collaboratorSaving") });
 
     const payload = new FormData(event.currentTarget);
 
     if (!isEditing && !logoCrop) {
-      setState({ status: "error", message: "Please upload and crop a company logo." });
+      setState({ status: "error", message: t("admin.messages.collaboratorUploadLogo") });
       return;
     }
 
     if (logoCrop) {
-      setState({ status: "saving", message: "Preparing cropped logo." });
-      payload.set("logo", await createCroppedLogoFile(logoCrop));
+      setState({ status: "saving", message: t("admin.messages.preparingLogo") });
+      try {
+        payload.set("logo", await createCroppedLogoFile(logoCrop));
+      } catch {
+        setState({ status: "error", message: t("admin.messages.logoCropFailed") });
+        return;
+      }
     }
 
     const response = await fetch(isEditing ? `/api/admin/footer/${partner?.id}` : "/api/admin/footer", {
@@ -83,7 +90,7 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
       const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "Footer collaborator could not be saved."
+        message: body?.error?.message ?? t("admin.messages.collaboratorSaveFailed")
       });
       return;
     }
@@ -118,7 +125,7 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
     };
     image.onerror = () => {
       URL.revokeObjectURL(src);
-      setState({ status: "error", message: "Logo preview could not be loaded." });
+      setState({ status: "error", message: t("admin.messages.logoPreviewFailed") });
     };
     image.src = src;
   }
@@ -153,7 +160,7 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
 
   async function onDelete() {
     if (!partner) return;
-    const confirmed = window.confirm(`Delete "${partner.name}" from the footer? This will also delete its logo.`);
+    const confirmed = window.confirm(t("admin.confirm.deleteFooter", { title: partner.name }));
     if (!confirmed) return;
 
     setState({ status: "deleting", message: "" });
@@ -163,7 +170,7 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
       const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "Footer collaborator could not be deleted."
+        message: body?.error?.message ?? t("admin.messages.collaboratorDeleteFailed")
       });
       return;
     }
@@ -175,32 +182,32 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
   return (
     <form className="admin-panel form-grid" encType="multipart/form-data" onSubmit={onSubmit}>
       <div className="field">
-        <label htmlFor="name">Company Name</label>
+        <label htmlFor="name">{t("admin.forms.labels.companyName")}</label>
         <input id="name" name="name" required minLength={2} maxLength={180} defaultValue={partner?.name ?? ""} />
       </div>
       <div className="field">
-        <label htmlFor="websiteUrl">Website URL</label>
+        <label htmlFor="websiteUrl">{t("admin.forms.labels.websiteUrl")}</label>
         <input
           id="websiteUrl"
           name="websiteUrl"
           type="url"
-          placeholder="https://example.com"
+          placeholder={t("admin.forms.placeholders.websiteUrl")}
           defaultValue={partner?.websiteUrl ?? ""}
         />
       </div>
       <div className="field">
-        <label htmlFor="sortOrder">Sort Order</label>
+        <label htmlFor="sortOrder">{t("admin.common.sortOrder")}</label>
         <input id="sortOrder" name="sortOrder" type="number" min={0} defaultValue={partner?.sortOrder ?? 0} />
       </div>
       <div className="field">
-        <label htmlFor="isVisible">Visibility</label>
+        <label htmlFor="isVisible">{t("admin.forms.labels.visibility")}</label>
         <select id="isVisible" name="isVisible" defaultValue={String(partner?.isVisible ?? true)}>
-          <option value="true">Visible</option>
-          <option value="false">Hidden</option>
+          <option value="true">{t("admin.common.visible")}</option>
+          <option value="false">{t("admin.common.hidden")}</option>
         </select>
       </div>
       <div className="field">
-        <label htmlFor="logo">Company Logo</label>
+        <label htmlFor="logo">{t("admin.forms.labels.companyLogo")}</label>
         {partner?.logoId ? (
           <div className="footer-logo-preview">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -216,14 +223,14 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
           onChange={onLogoChange}
         />
         <p className="field-help">
-          Drag the uploaded logo inside the fixed crop area and use zoom to choose how every footer logo appears.
+          {t("admin.forms.help.footerLogo")}
         </p>
         {logoCrop ? (
           <div className="footer-logo-crop-workspace">
             <div
               className="footer-logo-cropper"
               role="application"
-              aria-label="Drag logo crop position"
+              aria-label={t("admin.settings.dragLogoCrop")}
               onPointerDown={onCropPointerDown}
               onPointerMove={onCropPointerMove}
               onPointerUp={onCropPointerEnd}
@@ -233,7 +240,7 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
               <img src={logoCrop.src} alt="" style={getCropImageStyle(logoCrop)} draggable={false} />
             </div>
             <div className="field footer-logo-zoom">
-              <label htmlFor="logoZoom">Zoom</label>
+              <label htmlFor="logoZoom">{t("admin.common.zoom")}</label>
               <input
                 id="logoZoom"
                 type="range"
@@ -250,7 +257,7 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
       <div className="form-actions">
         <button className="button" type="submit" disabled={state.status === "saving"}>
           <Save size={18} />
-          {state.status === "saving" ? "Saving" : "Save Collaborator"}
+          {state.status === "saving" ? t("admin.common.saving") : t("admin.forms.buttons.saveCollaborator")}
         </button>
         {partner ? (
           <button
@@ -260,7 +267,7 @@ export function FooterPartnerForm({ partner }: FooterPartnerFormProps) {
             onClick={onDelete}
           >
             <Trash2 size={18} />
-            {state.status === "deleting" ? "Deleting" : "Delete"}
+            {state.status === "deleting" ? t("admin.common.deleting") : t("admin.common.delete")}
           </button>
         ) : null}
       </div>

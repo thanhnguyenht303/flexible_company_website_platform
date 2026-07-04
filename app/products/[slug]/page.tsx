@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
+import { localizeProduct } from "@/lib/i18n/content";
+import { getCurrentLanguage } from "@/lib/i18n/server";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
@@ -7,9 +9,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const { slug } = await params;
   if (!(await isPublicPageVisible("products"))) notFound();
 
-  const { products } = await getPublicSiteContext();
-  const product = products.find((item) => item.slug === slug);
-  if (!product) notFound();
+  const [{ products }, language] = await Promise.all([getPublicSiteContext(), getCurrentLanguage()]);
+  const productRecord = products.find((item) => item.slug === slug);
+  if (!productRecord) notFound();
+  const product = localizeProduct(productRecord, language);
   const galleryIds = "gallery" in product ? getGalleryIds(product.gallery) : [];
 
   return (

@@ -1002,6 +1002,16 @@ img {
   font-size: 0.9rem;
 }
 
+.translation-fields {
+  margin-top: 24px;
+}
+
+.translation-fields h2 {
+  margin: 0;
+  color: var(--color-secondary);
+  font-size: 1.05rem;
+}
+
 .post-editor-side {
   position: sticky;
   top: 94px;
@@ -1610,6 +1620,29 @@ img {
   margin-bottom: 24px;
 }
 
+.admin-language {
+  margin-bottom: 18px;
+}
+
+.admin-sidebar .language-switcher {
+  width: 100%;
+  justify-content: flex-start;
+  border-color: rgb(255 255 255 / 0.16);
+  background: rgb(255 255 255 / 0.08);
+  color: #dbe4f0;
+}
+
+.admin-sidebar .language-switcher select {
+  width: 100%;
+  color: #fff;
+}
+
+.login-language {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+}
+
 .admin-nav {
   display: grid;
   gap: 4px;
@@ -2117,6 +2150,13 @@ textarea::placeholder {
   white-space: nowrap;
 }
 
+.site-header__nav {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .nav {
   gap: 6px;
   color: var(--text-muted);
@@ -2140,6 +2180,33 @@ textarea::placeholder {
 
 .nav a.active::after {
   display: none;
+}
+
+.language-switcher {
+  flex: 0 0 auto;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 94%, #fff);
+  color: var(--text-muted);
+  padding: 0 8px;
+}
+
+.language-switcher svg {
+  color: var(--color-primary);
+}
+
+.language-switcher select {
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  cursor: pointer;
+  font-weight: 750;
+  outline: 0;
 }
 
 .button,
@@ -2841,6 +2908,12 @@ form > .message.error {
 
   .brand {
     max-width: 100%;
+  }
+
+  .site-header__nav {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .nav {

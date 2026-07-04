@@ -13,9 +13,12 @@ import { slugify } from "@/lib/slug";
 const updateServiceSchema = z
   .object({
     name: z.string().min(2).max(180).optional(),
+    nameVi: z.string().max(180).optional().nullable(),
     slug: z.string().max(220).optional(),
     summary: z.string().max(320).optional().nullable(),
+    summaryVi: z.string().max(320).optional().nullable(),
     description: z.string().optional().nullable(),
+    descriptionVi: z.string().optional().nullable(),
     status: z.nativeEnum(PublishStatus).optional(),
     removeImageIds: z.array(z.string()).optional()
   })
@@ -96,9 +99,12 @@ export async function PATCH(request: Request, { params }: Params) {
     where: { id },
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.nameVi !== undefined ? { nameVi: input.nameVi || null } : {}),
       ...(nextSlug ? { slug: nextSlug } : {}),
       ...(input.summary !== undefined ? { summary: input.summary || null } : {}),
+      ...(input.summaryVi !== undefined ? { summaryVi: input.summaryVi || null } : {}),
       ...(input.description !== undefined ? { description: input.description || null } : {}),
+      ...(input.descriptionVi !== undefined ? { descriptionVi: input.descriptionVi || null } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
       imageId: nextGallery[0] ?? null,
       gallery: nextGallery
@@ -140,7 +146,7 @@ async function parseServiceRequest(request: Request) {
     const formData = await request.formData();
     const fields: Record<string, string | string[]> = {};
 
-    for (const field of ["name", "slug", "summary", "description", "status"]) {
+    for (const field of ["name", "nameVi", "slug", "summary", "summaryVi", "description", "descriptionVi", "status"]) {
       const value = formData.get(field);
       if (typeof value === "string") fields[field] = value;
     }

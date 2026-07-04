@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { PublishStatus } from "@prisma/client";
 import { PublicShell } from "@/components/public/PublicShell";
 import { prisma } from "@/lib/db";
+import { getCurrentLanguage } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/translations";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 
 async function getPublishedJobs() {
@@ -19,7 +21,7 @@ async function getPublishedJobs() {
 export default async function CareersPage() {
   if (!(await isPublicPageVisible("careers"))) notFound();
 
-  const jobs = await getPublishedJobs();
+  const [jobs, language] = await Promise.all([getPublishedJobs(), getCurrentLanguage()]);
 
   return (
     <PublicShell>
@@ -27,8 +29,8 @@ export default async function CareersPage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <h2>Careers</h2>
-              <p>Explore current openings and apply to join the team.</p>
+              <h2>{translate(language, "pages.careers.title")}</h2>
+              <p>{translate(language, "pages.careers.description")}</p>
             </div>
           </div>
           <div className="job-list">
@@ -48,8 +50,8 @@ export default async function CareersPage() {
             ))}
             {jobs.length === 0 ? (
               <div className="card">
-                <h3>No open roles right now</h3>
-                <p>Please check back later for new opportunities.</p>
+                <h3>{translate(language, "pages.careers.emptyTitle")}</h3>
+                <p>{translate(language, "pages.careers.emptyText")}</p>
               </div>
             ) : null}
           </div>

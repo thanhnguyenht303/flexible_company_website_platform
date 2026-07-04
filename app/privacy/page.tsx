@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
+import { getCurrentLanguage } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/translations";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 
 export default async function PrivacyPage() {
   if (!(await isPublicPageVisible("privacy"))) notFound();
+  const language = await getCurrentLanguage();
 
   return (
     <PublicShell>
@@ -11,15 +14,12 @@ export default async function PrivacyPage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <h2>Privacy</h2>
-              <p>Contact form submissions are stored as inquiries for authorized admins.</p>
+              <h2>{translate(language, "pages.privacy.title")}</h2>
+              <p>{translate(language, "pages.privacy.description")}</p>
             </div>
           </div>
           <div className="card">
-            <p>
-              Configure your production privacy policy with company-specific data handling,
-              retention, analytics, and contact information before launch.
-            </p>
+            <p>{translate(language, "pages.privacy.body")}</p>
           </div>
         </div>
       </section>

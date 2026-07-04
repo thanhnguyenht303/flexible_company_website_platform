@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Send } from "lucide-react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type State = {
   status: "idle" | "submitting" | "success" | "error";
@@ -9,6 +10,7 @@ type State = {
 };
 
 export function ContactForm() {
+  const { t } = useLanguage();
   const [state, setState] = useState<State>({ status: "idle", message: "" });
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -26,47 +28,46 @@ export function ContactForm() {
     });
 
     if (!response.ok) {
-      const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "The inquiry could not be sent."
+        message: t("forms.contact.error")
       });
       return;
     }
 
     form.reset();
-    setState({ status: "success", message: "Thanks. Your message has been received." });
+    setState({ status: "success", message: t("forms.contact.success") });
   }
 
   return (
     <form className="admin-panel form-grid" onSubmit={onSubmit}>
       <div className="visually-hidden" aria-hidden="true">
-        <label htmlFor="website">Website</label>
+        <label htmlFor="website">{t("common.website")}</label>
         <input id="website" name="website" tabIndex={-1} autoComplete="off" />
       </div>
       <div className="field">
-        <label htmlFor="name">Name</label>
+        <label htmlFor="name">{t("common.name")}</label>
         <input id="name" name="name" required minLength={2} />
       </div>
       <div className="field">
-        <label htmlFor="email">Email</label>
+        <label htmlFor="email">{t("common.email")}</label>
         <input id="email" name="email" type="email" required />
       </div>
       <div className="field">
-        <label htmlFor="phone">Phone</label>
+        <label htmlFor="phone">{t("common.phone")}</label>
         <input id="phone" name="phone" />
       </div>
       <div className="field">
-        <label htmlFor="companyName">Company</label>
+        <label htmlFor="companyName">{t("common.company")}</label>
         <input id="companyName" name="companyName" />
       </div>
       <div className="field">
-        <label htmlFor="message">Message</label>
+        <label htmlFor="message">{t("common.message")}</label>
         <textarea id="message" name="message" required minLength={10} />
       </div>
       <button className="button" disabled={state.status === "submitting"} type="submit">
         <Send size={18} />
-        {state.status === "submitting" ? "Sending" : "Send"}
+        {state.status === "submitting" ? t("common.sending") : t("common.send")}
       </button>
       {state.message ? (
         <p className={`message ${state.status === "error" ? "error" : ""}`}>{state.message}</p>

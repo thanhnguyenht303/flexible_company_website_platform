@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Save } from "lucide-react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export function SiteSettingsForm({ site }: { site: Record<string, unknown> }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [state, setState] = useState<SaveState>("idle");
   const [message, setMessage] = useState("");
   const [logoCrop, setLogoCrop] = useState<LogoCropState | null>(null);
@@ -26,12 +28,12 @@ export function SiteSettingsForm({ site }: { site: Record<string, unknown> }) {
     const payload = new FormData(event.currentTarget);
 
     if (logoCrop) {
-      setMessage("Preparing cropped logo.");
+      setMessage(t("admin.messages.preparingLogo"));
       try {
         payload.set("logo", await createCroppedLogoFile(logoCrop));
-      } catch (error) {
+      } catch {
         setState("error");
-        setMessage(error instanceof Error ? error.message : "Logo crop could not be prepared.");
+        setMessage(t("admin.messages.logoCropFailed"));
         return;
       }
     }
@@ -44,12 +46,12 @@ export function SiteSettingsForm({ site }: { site: Record<string, unknown> }) {
     if (!response.ok) {
       const body = await response.json().catch(() => null);
       setState("error");
-      setMessage(body?.error?.message ?? "Save failed.");
+      setMessage(body?.error?.message ?? t("admin.messages.saveFailed"));
       return;
     }
 
     setState("saved");
-    setMessage("Saved.");
+    setMessage(t("admin.common.saved"));
     router.refresh();
   }
 
@@ -80,7 +82,7 @@ export function SiteSettingsForm({ site }: { site: Record<string, unknown> }) {
     image.onerror = () => {
       URL.revokeObjectURL(src);
       setState("error");
-      setMessage("Logo preview could not be loaded.");
+      setMessage(t("admin.messages.logoPreviewFailed"));
     };
     image.src = src;
   }
@@ -123,12 +125,12 @@ export function SiteSettingsForm({ site }: { site: Record<string, unknown> }) {
     <form className="admin-panel form-grid" encType="multipart/form-data" onSubmit={submit}>
       {["siteName", "tagline", "description", "email", "phone", "address", "domain"].map((name) => (
         <div className="field" key={name}>
-          <label htmlFor={name}>{labelize(name)}</label>
+          <label htmlFor={name}>{getSettingsLabel(name, t)}</label>
           <input id={name} name={name} defaultValue={stringValue(site[name])} />
         </div>
       ))}
       <div className="field">
-        <label htmlFor="logo">Site Logo</label>
+        <label htmlFor="logo">{t("admin.forms.labels.siteLogo")}</label>
         {stringValue(site.logoId) ? (
           <div className="site-logo-preview">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -136,13 +138,13 @@ export function SiteSettingsForm({ site }: { site: Record<string, unknown> }) {
           </div>
         ) : null}
         <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onLogoChange} />
-        <p className="field-help">Upload a logo, drag it inside the square, then save it for the top-left brand area.</p>
+        <p className="field-help">{t("admin.forms.help.siteLogo")}</p>
         {logoCrop ? (
           <div className="site-logo-crop-workspace">
             <div
               className="site-logo-cropper"
               role="application"
-              aria-label="Drag logo crop position"
+              aria-label={t("admin.settings.dragLogoCrop")}
               onPointerDown={onCropPointerDown}
               onPointerMove={onCropPointerMove}
               onPointerUp={onCropPointerEnd}
@@ -152,7 +154,7 @@ export function SiteSettingsForm({ site }: { site: Record<string, unknown> }) {
               <img src={logoCrop.src} alt="" style={getLogoCropImageStyle(logoCrop)} draggable={false} />
             </div>
             <div className="field site-logo-zoom">
-              <label htmlFor="logoZoom">Zoom</label>
+              <label htmlFor="logoZoom">{t("admin.common.zoom")}</label>
               <input
                 id="logoZoom"
                 type="range"
@@ -168,7 +170,7 @@ export function SiteSettingsForm({ site }: { site: Record<string, unknown> }) {
       </div>
       <button className="button" type="submit" disabled={state === "saving"}>
         <Save size={18} />
-        {state === "saving" ? "Saving" : "Save"}
+        {state === "saving" ? t("admin.common.saving") : t("admin.common.save")}
       </button>
       <StatusMessage state={state} message={message} />
     </form>
@@ -177,6 +179,7 @@ export function SiteSettingsForm({ site }: { site: Record<string, unknown> }) {
 
 export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const formRef = useRef<HTMLFormElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<SaveState>("idle");
@@ -202,12 +205,12 @@ export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> })
     const shouldRemoveBackground = payload.get("removeBackgroundImage") === "true";
 
     if (backgroundCrop && !shouldRemoveBackground) {
-      setMessage("Preparing cropped background.");
+      setMessage(t("admin.messages.preparingBackground"));
       try {
         payload.set("backgroundImage", await createCroppedBackgroundFile(backgroundCrop));
-      } catch (error) {
+      } catch {
         setState("error");
-        setMessage(error instanceof Error ? error.message : "Background crop could not be prepared.");
+        setMessage(t("admin.messages.backgroundCropFailed"));
         return;
       }
     }
@@ -220,12 +223,12 @@ export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> })
     if (!response.ok) {
       const body = await response.json().catch(() => null);
       setState("error");
-      setMessage(body?.error?.message ?? "Save failed.");
+      setMessage(body?.error?.message ?? t("admin.messages.saveFailed"));
       return;
     }
 
     setState("saved");
-    setMessage("Saved.");
+    setMessage(t("admin.common.saved"));
     router.refresh();
   }
 
@@ -236,7 +239,7 @@ export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> })
       return;
     }
 
-    const confirmed = window.confirm("Remove the theme background image and use the background color only?");
+    const confirmed = window.confirm(t("admin.confirm.removeBackground"));
     if (!confirmed || !formRef.current) return;
 
     setBackgroundCrop(null);
@@ -274,7 +277,7 @@ export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> })
     image.onerror = () => {
       URL.revokeObjectURL(src);
       setState("error");
-      setMessage("Background preview could not be loaded.");
+      setMessage(t("admin.messages.backgroundPreviewFailed"));
     };
     image.src = src;
   }
@@ -317,25 +320,25 @@ export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> })
     <form ref={formRef} className="admin-panel form-grid" encType="multipart/form-data" onSubmit={submit}>
       {colorFields.map((name) => (
         <div className="field" key={name}>
-          <label htmlFor={name}>{labelize(name)}</label>
+          <label htmlFor={name}>{getSettingsLabel(name, t)}</label>
           <input id={name} name={name} type="color" defaultValue={stringValue(theme[name]) || "#2563EB"} />
         </div>
       ))}
       <div className="field">
-        <label htmlFor="fontFamily">Font Family</label>
+        <label htmlFor="fontFamily">{t("admin.forms.labels.fontFamily")}</label>
         <input id="fontFamily" name="fontFamily" defaultValue={stringValue(theme.fontFamily) || "Inter"} />
       </div>
       <div className="field">
-        <label htmlFor="borderRadius">Border Radius</label>
+        <label htmlFor="borderRadius">{t("admin.forms.labels.borderRadius")}</label>
         <select id="borderRadius" name="borderRadius" defaultValue={stringValue(theme.borderRadius) || "medium"}>
-          <option value="none">None</option>
-          <option value="small">Small</option>
-          <option value="medium">Medium</option>
-          <option value="large">Large</option>
+          <option value="none">{t("admin.settings.radius.none")}</option>
+          <option value="small">{t("admin.settings.radius.small")}</option>
+          <option value="medium">{t("admin.settings.radius.medium")}</option>
+          <option value="large">{t("admin.settings.radius.large")}</option>
         </select>
       </div>
       <div className="field">
-        <label htmlFor="backgroundImage">Background Image</label>
+        <label htmlFor="backgroundImage">{t("admin.forms.labels.backgroundImage")}</label>
         {stringValue(theme.backgroundImageId) ? (
           <div className="theme-background-preview">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -351,14 +354,14 @@ export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> })
           onChange={onBackgroundChange}
         />
         <p className="field-help">
-          Upload a theme background, drag it inside the wide crop area, and save. Background color remains the fallback.
+          {t("admin.forms.help.backgroundImage")}
         </p>
         {backgroundCrop ? (
           <div className="theme-background-crop-workspace">
             <div
               className="theme-background-cropper"
               role="application"
-              aria-label="Drag background crop position"
+              aria-label={t("admin.settings.dragBackgroundCrop")}
               onPointerDown={onBackgroundPointerDown}
               onPointerMove={onBackgroundPointerMove}
               onPointerUp={onBackgroundPointerEnd}
@@ -368,7 +371,7 @@ export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> })
               <img src={backgroundCrop.src} alt="" style={getBackgroundCropImageStyle(backgroundCrop)} draggable={false} />
             </div>
             <div className="field theme-background-zoom">
-              <label htmlFor="backgroundZoom">Zoom</label>
+              <label htmlFor="backgroundZoom">{t("admin.common.zoom")}</label>
               <input
                 id="backgroundZoom"
                 type="range"
@@ -383,7 +386,7 @@ export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> })
         ) : null}
         {stringValue(theme.backgroundImageId) || backgroundCrop ? (
           <button className="button danger" type="button" disabled={state === "saving"} onClick={removeBackgroundImage}>
-            Remove Background Image
+            {t("admin.forms.buttons.removeBackgroundImage")}
           </button>
         ) : null}
       </div>
@@ -391,7 +394,7 @@ export function ThemeSettingsForm({ theme }: { theme: Record<string, unknown> })
       <input type="hidden" name="footerLayout" value={stringValue(theme.footerLayout) || "standard"} />
       <button className="button" type="submit" disabled={state === "saving"}>
         <Save size={18} />
-        {state === "saving" ? "Saving" : "Save"}
+        {state === "saving" ? t("admin.common.saving") : t("admin.common.save")}
       </button>
       <StatusMessage state={state} message={message} />
     </form>
@@ -424,10 +427,12 @@ const backgroundCropOutputWidth = 1920;
 const backgroundCropOutputHeight = 1080;
 
 function StatusMessage({ state, message }: { state: SaveState; message?: string }) {
+  const { t } = useLanguage();
+
   if (state === "idle" || state === "saving") return null;
   return (
     <p className={`message ${state === "error" ? "error" : ""}`}>
-      {message || (state === "saved" ? "Saved." : "Save failed.")}
+      {message || (state === "saved" ? t("admin.common.saved") : t("admin.messages.saveFailed"))}
     </p>
   );
 }
@@ -587,8 +592,23 @@ function getFilenameStem(filename: string) {
   return filename.replace(/\.[^.]+$/, "") || "logo";
 }
 
-function labelize(value: string) {
-  return value.replace(/[A-Z]/g, (letter) => ` ${letter}`).replace(/^./, (letter) => letter.toUpperCase());
+function getSettingsLabel(value: string, t: (key: string) => string) {
+  const labels: Record<string, string> = {
+    siteName: t("admin.forms.labels.siteName"),
+    tagline: t("admin.forms.labels.tagline"),
+    description: t("admin.forms.labels.description"),
+    email: t("admin.forms.labels.email"),
+    phone: t("admin.forms.labels.phone"),
+    address: t("admin.forms.labels.address"),
+    domain: t("admin.forms.labels.domain"),
+    primaryColor: t("admin.forms.labels.primaryColor"),
+    secondaryColor: t("admin.forms.labels.secondaryColor"),
+    accentColor: t("admin.forms.labels.accentColor"),
+    backgroundColor: t("admin.forms.labels.backgroundColor"),
+    textColor: t("admin.forms.labels.textColor")
+  };
+
+  return labels[value] ?? value;
 }
 
 function stringValue(value: unknown) {

@@ -4,6 +4,8 @@ import { JobApplicationForm } from "@/components/public/JobApplicationForm";
 import { PublicShell } from "@/components/public/PublicShell";
 import { ArticleContent } from "@/components/shared/ArticleContent";
 import { prisma } from "@/lib/db";
+import { getCurrentLanguage } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/translations";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 
 async function getJob(slug: string) {
@@ -23,7 +25,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
   const { slug } = await params;
   if (!(await isPublicPageVisible("careers"))) notFound();
 
-  const job = await getJob(slug);
+  const [job, language] = await Promise.all([getJob(slug), getCurrentLanguage()]);
   if (!job) notFound();
 
   return (
@@ -31,7 +33,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
       <article className="job-detail">
         <div className="container job-detail__layout">
           <main>
-            <div className="article-kicker">Careers</div>
+            <div className="article-kicker">{translate(language, "pages.careers.kicker")}</div>
             <h1>{job.title}</h1>
             {job.summary ? <p className="article-deck">{job.summary}</p> : null}
             <div className="job-meta">
@@ -42,12 +44,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
               {job.salaryRange ? <span>{job.salaryRange}</span> : null}
             </div>
             <section className="job-section">
-              <h2>About The Role</h2>
+              <h2>{translate(language, "pages.careers.aboutRole")}</h2>
               <ArticleContent content={job.description} />
             </section>
             {job.requirements ? (
               <section className="job-section">
-                <h2>What We Are Looking For</h2>
+                <h2>{translate(language, "pages.careers.requirements")}</h2>
                 <ArticleContent content={job.requirements} />
               </section>
             ) : null}
@@ -56,12 +58,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
             <JobApplicationForm jobId={job.id} jobTitle={job.title} />
             {job.applyUrl ? (
               <a className="button secondary" href={job.applyUrl}>
-                External Posting
+                {translate(language, "common.externalPosting")}
               </a>
             ) : null}
             {job.applyEmail ? (
               <p className="field-help">
-                You can also email <a href={`mailto:${job.applyEmail}`}>{job.applyEmail}</a>.
+                {translate(language, "pages.careers.alsoEmail", { email: job.applyEmail })}
               </p>
             ) : null}
           </aside>

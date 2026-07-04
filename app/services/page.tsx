@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
+import { localizeService } from "@/lib/i18n/content";
+import { getCurrentLanguage } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/translations";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
 
 export default async function ServicesPage() {
   if (!(await isPublicPageVisible("services"))) notFound();
 
-  const { services } = await getPublicSiteContext();
+  const [{ services }, language] = await Promise.all([getPublicSiteContext(), getCurrentLanguage()]);
+  const localizedServices = services.map((service) => localizeService(service, language));
 
   return (
     <PublicShell>
@@ -15,12 +19,12 @@ export default async function ServicesPage() {
         <div className="container">
           <div className="section-header">
             <div>
-              <h2>Services</h2>
-              <p>Service records can be drafted, published, archived, and rendered publicly.</p>
+              <h2>{translate(language, "pages.services.title")}</h2>
+              <p>{translate(language, "pages.services.description")}</p>
             </div>
           </div>
           <div className="grid">
-            {services.map((service) => (
+            {localizedServices.map((service) => (
               <Link className="card" href={`/services/${service.slug}`} key={service.slug}>
                 {"imageId" in service && service.imageId ? (
                   <div className="card-media">
@@ -32,6 +36,9 @@ export default async function ServicesPage() {
                 <p>{service.summary}</p>
               </Link>
             ))}
+            {localizedServices.length === 0 ? (
+              <p className="message">No services are published yet.</p>
+            ) : null}
           </div>
         </div>
       </section>

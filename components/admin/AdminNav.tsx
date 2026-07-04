@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import type { LucideProps } from "lucide-react";
 import { LogoutButton } from "@/components/admin/LogoutButton";
+import { useLanguage } from "@/components/public/LanguageProvider";
 import {
   BarChart3,
   Briefcase,
@@ -24,65 +25,66 @@ import {
 
 type AdminNavLink = {
   href: string;
-  label: string;
+  labelKey: string;
   icon: ComponentType<LucideProps>;
 };
 
 const links: AdminNavLink[] = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/settings/site", label: "Site Settings", icon: Settings },
-  { href: "/admin/settings/theme", label: "Theme", icon: Palette },
-  { href: "/admin/pages", label: "Pages", icon: FileText },
-  { href: "/admin/services", label: "Services", icon: Wrench },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/posts", label: "Posts", icon: BarChart3 },
-  { href: "/admin/careers", label: "Careers", icon: Briefcase },
-  { href: "/admin/team", label: "Team", icon: Users },
-  { href: "/admin/footer", label: "Footer", icon: Handshake },
-  { href: "/admin/media", label: "Media", icon: ImageIcon },
-  { href: "/admin/inquiries", label: "Inquiries", icon: Inbox },
-  { href: "/admin/users", label: "Users", icon: Shield }
+  { href: "/admin/dashboard", labelKey: "admin.nav.dashboard", icon: LayoutDashboard },
+  { href: "/admin/settings/site", labelKey: "admin.nav.siteSettings", icon: Settings },
+  { href: "/admin/settings/theme", labelKey: "admin.nav.theme", icon: Palette },
+  { href: "/admin/pages", labelKey: "admin.nav.pages", icon: FileText },
+  { href: "/admin/services", labelKey: "admin.nav.services", icon: Wrench },
+  { href: "/admin/products", labelKey: "admin.nav.products", icon: Package },
+  { href: "/admin/posts", labelKey: "admin.nav.posts", icon: BarChart3 },
+  { href: "/admin/careers", labelKey: "admin.nav.careers", icon: Briefcase },
+  { href: "/admin/team", labelKey: "admin.nav.team", icon: Users },
+  { href: "/admin/footer", labelKey: "admin.nav.footer", icon: Handshake },
+  { href: "/admin/media", labelKey: "admin.nav.media", icon: ImageIcon },
+  { href: "/admin/inquiries", labelKey: "admin.nav.inquiries", icon: Inbox },
+  { href: "/admin/users", labelKey: "admin.nav.users", icon: Shield }
 ];
 
 export function AdminNav() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
-    <nav className="admin-nav" aria-label="Admin navigation">
+    <nav className="admin-nav" aria-label={t("admin.navigation")}>
       <div className="admin-nav__group">
-        <span className="admin-nav__label">Workspace</span>
+        <span className="admin-nav__label">{t("admin.groups.workspace")}</span>
         {links.slice(0, 4).map((item) => (
-          <AdminNavItem item={item} pathname={pathname} key={item.href} />
+          <AdminNavItem item={item} pathname={pathname} t={t} key={item.href} />
         ))}
       </div>
       <div className="admin-nav__group">
-        <span className="admin-nav__label">Content</span>
+        <span className="admin-nav__label">{t("admin.groups.content")}</span>
         {links.slice(4, 10).map((item) => (
-          <AdminNavItem item={item} pathname={pathname} key={item.href} />
+          <AdminNavItem item={item} pathname={pathname} t={t} key={item.href} />
         ))}
       </div>
       <div className="admin-nav__group">
-        <span className="admin-nav__label">Admin</span>
+        <span className="admin-nav__label">{t("admin.groups.admin")}</span>
         {links.slice(10).map((item) => (
-          <AdminNavItem item={item} pathname={pathname} key={item.href} />
+          <AdminNavItem item={item} pathname={pathname} t={t} key={item.href} />
         ))}
       </div>
       <LogoutButton>
         <LogOut size={18} />
-        Sign out
+        {t("admin.common.signOut")}
       </LogoutButton>
     </nav>
   );
 }
 
-function AdminNavItem({ item, pathname }: { item: AdminNavLink; pathname: string }) {
+function AdminNavItem({ item, pathname, t }: { item: AdminNavLink; pathname: string; t: (key: string) => string }) {
   const Icon = item.icon;
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   return (
     <Link href={item.href} className={isActive ? "active" : undefined} aria-current={isActive ? "page" : undefined}>
       <Icon size={18} />
-      {item.label}
+      {t(item.labelKey)}
     </Link>
   );
 }

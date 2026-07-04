@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { VisualPageBuilder } from "@/components/admin/VisualPageBuilder";
 import { prisma } from "@/lib/db";
+import { getServerTranslations } from "@/lib/i18n/server";
 import { getPublicSiteContext } from "@/lib/public-data";
 import type { BuilderBlock } from "@/modules/page-builder/page-builder.types";
 import { sectionsToBuilderBlocks } from "@/modules/page-builder/page-builder.utils";
@@ -44,26 +45,33 @@ export default async function AdminPageBuilderPage({ params }: { params: Promise
   const result = await getPage(slug);
   if (!result) notFound();
   const { page, draft } = result;
-  const { team, services, posts } = await getPublicSiteContext();
+  const [{ team, services, posts }, { t }] = await Promise.all([getPublicSiteContext(), getServerTranslations()]);
   const dynamicContent = {
     team: team.map((member) => ({
       id: "id" in member ? member.id : null,
       name: member.name,
       position: member.position,
+      positionVi: "positionVi" in member ? member.positionVi : null,
       bio: member.bio,
+      bioVi: "bioVi" in member ? member.bioVi : null,
       photoId: "photoId" in member ? member.photoId : null
     })),
     services: services.map((service) => ({
       name: service.name,
+      nameVi: "nameVi" in service ? service.nameVi : null,
       slug: service.slug,
       summary: service.summary,
+      summaryVi: "summaryVi" in service ? service.summaryVi : null,
       imageId: "imageId" in service ? service.imageId : null
     })),
     posts: posts.map((post) => ({
       title: post.title,
+      titleVi: "titleVi" in post ? post.titleVi : null,
       slug: post.slug,
       excerpt: post.excerpt,
+      excerptVi: "excerptVi" in post ? post.excerptVi : null,
       content: post.content,
+      contentVi: "contentVi" in post ? post.contentVi : null,
       featuredImageId: "featuredImageId" in post ? post.featuredImageId : null
     }))
   };
@@ -74,11 +82,11 @@ export default async function AdminPageBuilderPage({ params }: { params: Promise
     <AdminShell>
       <div className="admin-page-header">
         <div>
-          <h1>Visual Page Builder</h1>
-          <p className="message">Editing {page.title}</p>
+          <h1>{t("admin.common.visualPageBuilder")}</h1>
+          <p className="message">{t("admin.common.edit")} {page.title}</p>
         </div>
         <Link className="button secondary" href="/admin/pages">
-          Back
+          {t("admin.common.back")}
         </Link>
       </div>
       <VisualPageBuilder

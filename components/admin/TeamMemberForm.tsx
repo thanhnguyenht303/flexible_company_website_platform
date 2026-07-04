@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Save, Trash2 } from "lucide-react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type TeamMemberFormMember = {
   id: string;
   name: string;
   position: string | null;
+  positionVi: string | null;
   bio: string | null;
+  bioVi: string | null;
   email: string | null;
   phone: string | null;
   sortOrder: number;
@@ -27,12 +30,13 @@ type FormState = {
 
 export function TeamMemberForm({ member }: TeamMemberFormProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const isEditing = Boolean(member);
   const [state, setState] = useState<FormState>({ status: "idle", message: "" });
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState({ status: "saving", message: "Saving employee." });
+    setState({ status: "saving", message: t("admin.messages.employeeSaving") });
 
     const payload = new FormData(event.currentTarget);
     const response = await fetch(isEditing ? `/api/admin/team/${member?.id}` : "/api/admin/team", {
@@ -44,7 +48,7 @@ export function TeamMemberForm({ member }: TeamMemberFormProps) {
       const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "Employee could not be saved."
+        message: body?.error?.message ?? t("admin.messages.employeeSaveFailed")
       });
       return;
     }
@@ -55,7 +59,7 @@ export function TeamMemberForm({ member }: TeamMemberFormProps) {
 
   async function onDelete() {
     if (!member) return;
-    const confirmed = window.confirm(`Delete "${member.name}"? This will also delete the employee photo.`);
+    const confirmed = window.confirm(t("admin.confirm.deleteEmployee", { title: member.name }));
     if (!confirmed) return;
 
     setState({ status: "deleting", message: "" });
@@ -65,7 +69,7 @@ export function TeamMemberForm({ member }: TeamMemberFormProps) {
       const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "Employee could not be deleted."
+        message: body?.error?.message ?? t("admin.messages.employeeDeleteFailed")
       });
       return;
     }
@@ -77,38 +81,46 @@ export function TeamMemberForm({ member }: TeamMemberFormProps) {
   return (
     <form className="admin-panel form-grid" encType="multipart/form-data" onSubmit={onSubmit}>
       <div className="field">
-        <label htmlFor="name">Name</label>
+        <label htmlFor="name">{t("admin.forms.labels.name")}</label>
         <input id="name" name="name" required minLength={2} maxLength={160} defaultValue={member?.name ?? ""} />
       </div>
       <div className="field">
-        <label htmlFor="position">Position</label>
+        <label htmlFor="position">{t("admin.forms.labels.position")}</label>
         <input id="position" name="position" maxLength={160} defaultValue={member?.position ?? ""} />
       </div>
       <div className="field">
-        <label htmlFor="bio">Description</label>
+        <label htmlFor="positionVi">{t("admin.forms.labels.positionVi")}</label>
+        <input id="positionVi" name="positionVi" maxLength={160} defaultValue={member?.positionVi ?? ""} />
+      </div>
+      <div className="field">
+        <label htmlFor="bio">{t("admin.forms.labels.description")}</label>
         <textarea id="bio" name="bio" maxLength={2000} defaultValue={member?.bio ?? ""} />
       </div>
       <div className="field">
-        <label htmlFor="email">Email</label>
+        <label htmlFor="bioVi">{t("admin.forms.labels.descriptionVi")}</label>
+        <textarea id="bioVi" name="bioVi" maxLength={2000} defaultValue={member?.bioVi ?? ""} />
+      </div>
+      <div className="field">
+        <label htmlFor="email">{t("admin.forms.labels.email")}</label>
         <input id="email" name="email" type="email" defaultValue={member?.email ?? ""} />
       </div>
       <div className="field">
-        <label htmlFor="phone">Phone</label>
+        <label htmlFor="phone">{t("admin.forms.labels.phone")}</label>
         <input id="phone" name="phone" maxLength={80} defaultValue={member?.phone ?? ""} />
       </div>
       <div className="field">
-        <label htmlFor="sortOrder">Sort Order</label>
+        <label htmlFor="sortOrder">{t("admin.common.sortOrder")}</label>
         <input id="sortOrder" name="sortOrder" type="number" min={0} defaultValue={member?.sortOrder ?? 0} />
       </div>
       <div className="field">
-        <label htmlFor="isVisible">Visibility</label>
+        <label htmlFor="isVisible">{t("admin.forms.labels.visibility")}</label>
         <select id="isVisible" name="isVisible" defaultValue={String(member?.isVisible ?? true)}>
-          <option value="true">Visible</option>
-          <option value="false">Hidden</option>
+          <option value="true">{t("admin.common.visible")}</option>
+          <option value="false">{t("admin.common.hidden")}</option>
         </select>
       </div>
       <div className="field">
-        <label htmlFor="photo">Employee Image</label>
+        <label htmlFor="photo">{t("admin.forms.labels.employeeImage")}</label>
         {member?.photoId ? (
           <div className="employee-photo-preview">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -116,12 +128,12 @@ export function TeamMemberForm({ member }: TeamMemberFormProps) {
           </div>
         ) : null}
         <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
-        <p className="field-help">Recommended: square portrait image. Uploading a new image replaces the old one.</p>
+        <p className="field-help">{t("admin.forms.help.employeeImage")}</p>
       </div>
       <div className="form-actions">
         <button className="button" type="submit" disabled={state.status === "saving"}>
           <Save size={18} />
-          {state.status === "saving" ? "Saving" : "Save Employee"}
+          {state.status === "saving" ? t("admin.common.saving") : t("admin.forms.buttons.saveEmployee")}
         </button>
         {member ? (
           <button
@@ -131,7 +143,7 @@ export function TeamMemberForm({ member }: TeamMemberFormProps) {
             onClick={onDelete}
           >
             <Trash2 size={18} />
-            {state.status === "deleting" ? "Deleting" : "Delete"}
+            {state.status === "deleting" ? t("admin.common.deleting") : t("admin.common.delete")}
           </button>
         ) : null}
       </div>

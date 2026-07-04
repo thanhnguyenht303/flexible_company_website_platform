@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Save, Trash2 } from "lucide-react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type ServiceStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
@@ -15,9 +16,12 @@ type ExistingServiceImage = {
 type ServiceFormService = {
   id: string;
   name: string;
+  nameVi: string | null;
   slug: string;
   summary: string | null;
+  summaryVi: string | null;
   description: string | null;
+  descriptionVi: string | null;
   status: ServiceStatus;
   imageId: string | null;
 };
@@ -34,12 +38,13 @@ type FormState = {
 
 export function ServiceForm({ service, images = [] }: ServiceFormProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const isEditing = Boolean(service);
   const [state, setState] = useState<FormState>({ status: "idle", message: "" });
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState({ status: "saving", message: "Saving service." });
+    setState({ status: "saving", message: t("admin.messages.serviceSaved") });
 
     const payload = new FormData(event.currentTarget);
     const response = await fetch(isEditing ? `/api/admin/services/${service?.id}` : "/api/admin/services", {
@@ -51,7 +56,7 @@ export function ServiceForm({ service, images = [] }: ServiceFormProps) {
       const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "Service could not be saved."
+        message: body?.error?.message ?? t("admin.messages.serviceSaveFailed")
       });
       return;
     }
@@ -62,7 +67,7 @@ export function ServiceForm({ service, images = [] }: ServiceFormProps) {
 
   async function onDelete() {
     if (!service) return;
-    const confirmed = window.confirm(`Delete "${service.name}"? This will also delete its images.`);
+    const confirmed = window.confirm(t("admin.confirm.deleteService", { title: service.name }));
     if (!confirmed) return;
 
     setState({ status: "deleting", message: "" });
@@ -72,7 +77,7 @@ export function ServiceForm({ service, images = [] }: ServiceFormProps) {
       const body = await response.json().catch(() => null);
       setState({
         status: "error",
-        message: body?.error?.message ?? "Service could not be deleted."
+        message: body?.error?.message ?? t("admin.messages.serviceDeleteFailed")
       });
       return;
     }
@@ -84,39 +89,51 @@ export function ServiceForm({ service, images = [] }: ServiceFormProps) {
   return (
     <form className="admin-panel form-grid" encType="multipart/form-data" onSubmit={onSubmit}>
       <div className="field">
-        <label htmlFor="name">Title</label>
+        <label htmlFor="name">{t("admin.forms.labels.title")}</label>
         <input id="name" name="name" required minLength={2} maxLength={180} defaultValue={service?.name ?? ""} />
       </div>
       <div className="field">
-        <label htmlFor="slug">Slug</label>
+        <label htmlFor="nameVi">{t("admin.forms.labels.titleVi")}</label>
+        <input id="nameVi" name="nameVi" maxLength={180} defaultValue={service?.nameVi ?? ""} />
+      </div>
+      <div className="field">
+        <label htmlFor="slug">{t("admin.forms.labels.slug")}</label>
         <input
           id="slug"
           name="slug"
-          placeholder="auto-generated from title if blank"
+          placeholder={t("admin.forms.placeholders.autoSlug")}
           maxLength={220}
           defaultValue={service?.slug ?? ""}
         />
       </div>
       <div className="field">
-        <label htmlFor="summary">Summary</label>
+        <label htmlFor="summary">{t("admin.forms.labels.summary")}</label>
         <textarea id="summary" name="summary" maxLength={320} defaultValue={service?.summary ?? ""} />
       </div>
       <div className="field">
-        <label htmlFor="description">Description</label>
+        <label htmlFor="summaryVi">{t("admin.forms.labels.summaryVi")}</label>
+        <textarea id="summaryVi" name="summaryVi" maxLength={320} defaultValue={service?.summaryVi ?? ""} />
+      </div>
+      <div className="field">
+        <label htmlFor="description">{t("admin.forms.labels.description")}</label>
         <textarea id="description" name="description" defaultValue={service?.description ?? ""} />
       </div>
       <div className="field">
-        <label htmlFor="status">Status</label>
+        <label htmlFor="descriptionVi">{t("admin.forms.labels.descriptionVi")}</label>
+        <textarea id="descriptionVi" name="descriptionVi" defaultValue={service?.descriptionVi ?? ""} />
+      </div>
+      <div className="field">
+        <label htmlFor="status">{t("admin.forms.labels.status")}</label>
         <select id="status" name="status" defaultValue={service?.status ?? "DRAFT"}>
-          <option value="DRAFT">Draft</option>
-          <option value="PUBLISHED">Published</option>
-          <option value="ARCHIVED">Archived</option>
+          <option value="DRAFT">{t("admin.status.DRAFT")}</option>
+          <option value="PUBLISHED">{t("admin.status.PUBLISHED")}</option>
+          <option value="ARCHIVED">{t("admin.status.ARCHIVED")}</option>
         </select>
       </div>
 
       {images.length ? (
         <div className="field">
-          <label>Existing Images</label>
+          <label>{t("admin.forms.labels.existingImages")}</label>
           <div className="media-grid">
             {images.map((image) => (
               <label className="media-tile" key={image.id}>
@@ -124,7 +141,7 @@ export function ServiceForm({ service, images = [] }: ServiceFormProps) {
                 <img src={image.url} alt="" />
                 <span>{image.originalName}</span>
                 <span>
-                  <input type="checkbox" name="removeImageIds" value={image.id} /> Remove
+                  <input type="checkbox" name="removeImageIds" value={image.id} /> {t("admin.common.remove")}
                 </span>
               </label>
             ))}
@@ -133,7 +150,7 @@ export function ServiceForm({ service, images = [] }: ServiceFormProps) {
       ) : null}
 
       <div className="field">
-        <label htmlFor="images">Add Service Images</label>
+        <label htmlFor="images">{t("admin.forms.labels.addServiceImages")}</label>
         <input
           id="images"
           name="images"
@@ -141,13 +158,13 @@ export function ServiceForm({ service, images = [] }: ServiceFormProps) {
           accept="image/jpeg,image/png,image/webp"
           multiple
         />
-        <p className="field-help">Upload one or more service images. The first saved image becomes the service thumbnail.</p>
+        <p className="field-help">{t("admin.forms.help.serviceImages")}</p>
       </div>
 
       <div className="form-actions">
         <button className="button" type="submit" disabled={state.status === "saving"}>
           <Save size={18} />
-          {state.status === "saving" ? "Saving" : "Save Service"}
+          {state.status === "saving" ? t("admin.common.saving") : t("admin.forms.buttons.saveService")}
         </button>
         {service ? (
           <button
@@ -157,7 +174,7 @@ export function ServiceForm({ service, images = [] }: ServiceFormProps) {
             onClick={onDelete}
           >
             <Trash2 size={18} />
-            {state.status === "deleting" ? "Deleting" : "Delete"}
+            {state.status === "deleting" ? t("admin.common.deleting") : t("admin.common.delete")}
           </button>
         ) : null}
       </div>

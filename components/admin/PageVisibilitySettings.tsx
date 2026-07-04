@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type PageVisibilitySettingsProps = {
   pages: Array<{
@@ -14,6 +15,7 @@ type PageVisibilitySettingsProps = {
 
 export function PageVisibilitySettings({ pages }: PageVisibilitySettingsProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [savingSlug, setSavingSlug] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -29,26 +31,26 @@ export function PageVisibilitySettings({ pages }: PageVisibilitySettingsProps) {
     const payload = await response.json().catch(() => null);
 
     if (!response.ok || payload?.success === false) {
-      setMessage(payload?.error?.message ?? "Could not update page visibility.");
+      setMessage(payload?.error?.message ?? t("admin.pages.visibilityFailed"));
       setSavingSlug(null);
       return;
     }
 
-    setMessage("Page visibility updated.");
+    setMessage(t("admin.pages.visibilityUpdated"));
     setSavingSlug(null);
     router.refresh();
   }
 
   return (
     <div className="admin-panel">
-      <h2>Public Page Visibility</h2>
+      <h2>{t("admin.pages.publicVisibility")}</h2>
       <table className="table">
         <thead>
           <tr>
-            <th>Page</th>
-            <th>Path</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th>{t("admin.common.page")}</th>
+            <th>{t("admin.common.path")}</th>
+            <th>{t("admin.common.status")}</th>
+            <th>{t("admin.common.action")}</th>
           </tr>
         </thead>
         <tbody>
@@ -57,7 +59,7 @@ export function PageVisibilitySettings({ pages }: PageVisibilitySettingsProps) {
               <td>{page.title}</td>
               <td>{page.href}</td>
               <td>
-                <span className="badge">{page.visible ? "Visible" : "Hidden"}</span>
+                <span className="badge">{page.visible ? t("admin.common.visible") : t("admin.common.hidden")}</span>
               </td>
               <td>
                 <button
@@ -66,7 +68,7 @@ export function PageVisibilitySettings({ pages }: PageVisibilitySettingsProps) {
                   type="button"
                   onClick={() => setVisibility(page.slug, !page.visible)}
                 >
-                  {savingSlug === page.slug ? "Saving..." : page.visible ? "Hide" : "Show"}
+                  {savingSlug === page.slug ? t("admin.common.saving") : page.visible ? t("admin.pages.hide") : t("admin.pages.show")}
                 </button>
               </td>
             </tr>

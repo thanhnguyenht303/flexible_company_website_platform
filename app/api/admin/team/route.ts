@@ -31,7 +31,9 @@ export async function POST(request: Request) {
     data: {
       name: parsed.data.name,
       position: parsed.data.position || null,
+      positionVi: parsed.data.positionVi || null,
       bio: parsed.data.bio || null,
+      bioVi: parsed.data.bioVi || null,
       email: parsed.data.email || null,
       phone: parsed.data.phone || null,
       sortOrder: parsed.data.sortOrder,
@@ -67,7 +69,9 @@ async function parseTeamRequest(request: Request) {
       fields: {
         name: stringField(formData.get("name")),
         position: stringField(formData.get("position")),
+        positionVi: stringField(formData.get("positionVi")),
         bio: stringField(formData.get("bio")),
+        bioVi: stringField(formData.get("bioVi")),
         email: stringField(formData.get("email")),
         phone: stringField(formData.get("phone")),
         sortOrder: stringField(formData.get("sortOrder")) || "0",

@@ -13,9 +13,12 @@ import { slugify } from "@/lib/slug";
 const updatePostSchema = z
   .object({
     title: z.string().min(2).max(180).optional(),
+    titleVi: z.string().max(180).optional().nullable(),
     slug: z.string().max(220).optional(),
     excerpt: z.string().max(320).optional().nullable(),
+    excerptVi: z.string().max(320).optional().nullable(),
     content: z.string().min(20).optional(),
+    contentVi: z.string().optional().nullable(),
     status: z.nativeEnum(PublishStatus).optional()
   })
   .refine((value) => Object.keys(value).length > 0, {
@@ -84,9 +87,12 @@ export async function PATCH(request: Request, { params }: Params) {
     where: { id },
     data: {
       ...(input.title !== undefined ? { title: input.title } : {}),
+      ...(input.titleVi !== undefined ? { titleVi: input.titleVi || null } : {}),
       ...(nextSlug ? { slug: nextSlug } : {}),
       ...(input.excerpt !== undefined ? { excerpt: input.excerpt || null } : {}),
+      ...(input.excerptVi !== undefined ? { excerptVi: input.excerptVi || null } : {}),
       ...(contentWithInlineImages !== undefined ? { content: contentWithInlineImages } : {}),
+      ...(input.contentVi !== undefined ? { contentVi: input.contentVi || null } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(shouldSetPublishedAt ? { publishedAt: new Date() } : {}),
       ...(shouldClearPublishedAt ? { publishedAt: null } : {})
@@ -172,7 +178,7 @@ async function parsePostRequest(request: Request) {
       .filter((value): value is string => typeof value === "string");
     const fields: Record<string, string> = {};
 
-    for (const field of ["title", "slug", "excerpt", "content", "status"]) {
+    for (const field of ["title", "titleVi", "slug", "excerpt", "excerptVi", "content", "contentVi", "status"]) {
       const value = formData.get(field);
       if (typeof value === "string") {
         fields[field] = value;

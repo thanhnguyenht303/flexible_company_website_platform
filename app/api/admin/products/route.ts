@@ -40,9 +40,12 @@ export async function POST(request: Request) {
   let product = await prisma.product.create({
     data: {
       name: input.name,
+      nameVi: input.nameVi || null,
       slug: input.slug,
       summary: input.summary || null,
+      summaryVi: input.summaryVi || null,
       description: input.description || null,
+      descriptionVi: input.descriptionVi || null,
       status: input.status as PublishStatus,
       gallery: []
     }
@@ -72,9 +75,12 @@ async function parseProductRequest(request: Request) {
     return {
       fields: {
         name: stringField(formData.get("name")),
+        nameVi: stringField(formData.get("nameVi")),
         slug: stringField(formData.get("slug")),
         summary: stringField(formData.get("summary")),
+        summaryVi: stringField(formData.get("summaryVi")),
         description: stringField(formData.get("description")),
+        descriptionVi: stringField(formData.get("descriptionVi")),
         status: stringField(formData.get("status")) || "DRAFT"
       },
       images: formData

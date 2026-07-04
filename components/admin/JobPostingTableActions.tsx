@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Edit, ExternalLink, Files, Trash2 } from "lucide-react";
+import { useLanguage } from "@/components/public/LanguageProvider";
 
 type JobStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
@@ -16,6 +17,7 @@ type JobPostingTableActionsProps = {
 
 export function JobPostingTableActions({ id, slug, title, status }: JobPostingTableActionsProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -33,7 +35,7 @@ export function JobPostingTableActions({ id, slug, title, status }: JobPostingTa
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      setMessage(body?.error?.message ?? "Status update failed.");
+      setMessage(body?.error?.message ?? t("admin.messages.statusFailed"));
       return;
     }
 
@@ -41,7 +43,7 @@ export function JobPostingTableActions({ id, slug, title, status }: JobPostingTa
   }
 
   async function deleteJob() {
-    const confirmed = window.confirm(`Delete "${title}"? This cannot be undone.`);
+    const confirmed = window.confirm(t("admin.confirm.deleteJob", { title }));
     if (!confirmed) return;
 
     setBusy(true);
@@ -52,7 +54,7 @@ export function JobPostingTableActions({ id, slug, title, status }: JobPostingTa
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      setMessage(body?.error?.message ?? "Delete failed.");
+      setMessage(body?.error?.message ?? t("admin.messages.deleteFailed"));
       return;
     }
 
@@ -62,25 +64,25 @@ export function JobPostingTableActions({ id, slug, title, status }: JobPostingTa
   return (
     <div className="row-actions">
       <select
-        aria-label={`Status for ${title}`}
+        aria-label={t("admin.actions.statusFor", { title })}
         value={status}
         disabled={busy}
         onChange={(event) => updateStatus(event.target.value as JobStatus)}
       >
-        <option value="DRAFT">Draft</option>
-        <option value="PUBLISHED">Published</option>
-        <option value="ARCHIVED">Archived</option>
+        <option value="DRAFT">{t("admin.status.DRAFT")}</option>
+        <option value="PUBLISHED">{t("admin.status.PUBLISHED")}</option>
+        <option value="ARCHIVED">{t("admin.status.ARCHIVED")}</option>
       </select>
-      <Link className="icon-button secondary" href={`/admin/careers/${id}/edit`} title="Edit job">
+      <Link className="icon-button secondary" href={`/admin/careers/${id}/edit`} title={t("admin.actions.editJob")}>
         <Edit size={17} />
       </Link>
-      <Link className="icon-button secondary" href={`/admin/careers/${id}/applications`} title="View applications">
+      <Link className="icon-button secondary" href={`/admin/careers/${id}/applications`} title={t("admin.actions.viewApplications")}>
         <Files size={17} />
       </Link>
-      <Link className="icon-button secondary" href={`/careers/${slug}`} title="View public job">
+      <Link className="icon-button secondary" href={`/careers/${slug}`} title={t("admin.actions.viewJob")}>
         <ExternalLink size={17} />
       </Link>
-      <button className="icon-button danger" type="button" disabled={busy} onClick={deleteJob} title="Delete job">
+      <button className="icon-button danger" type="button" disabled={busy} onClick={deleteJob} title={t("admin.actions.deleteJob")}>
         <Trash2 size={17} />
       </button>
       {message ? <span className="message error">{message}</span> : null}

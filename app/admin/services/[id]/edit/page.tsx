@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ServiceForm } from "@/components/admin/ServiceForm";
 import { prisma } from "@/lib/db";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 async function getService(id: string) {
   try {
@@ -25,24 +26,27 @@ async function getService(id: string) {
 
 export default async function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const data = await getService(id);
+  const [data, { t }] = await Promise.all([getService(id), getServerTranslations()]);
   if (!data) notFound();
 
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Edit Service</h1>
+        <h1>{t("admin.pageTitles.editService")}</h1>
         <Link className="button secondary" href="/admin/services">
-          Back
+          {t("admin.common.back")}
         </Link>
       </div>
       <ServiceForm
         service={{
           id: data.service.id,
           name: data.service.name,
+          nameVi: data.service.nameVi,
           slug: data.service.slug,
           summary: data.service.summary,
+          summaryVi: data.service.summaryVi,
           description: data.service.description,
+          descriptionVi: data.service.descriptionVi,
           status: data.service.status,
           imageId: data.service.imageId
         }}

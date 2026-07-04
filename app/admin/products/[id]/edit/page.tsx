@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { prisma } from "@/lib/db";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 async function getProduct(id: string) {
   try {
@@ -25,24 +26,27 @@ async function getProduct(id: string) {
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const data = await getProduct(id);
+  const [data, { t }] = await Promise.all([getProduct(id), getServerTranslations()]);
   if (!data) notFound();
 
   return (
     <AdminShell>
       <div className="admin-page-header">
-        <h1>Edit Product</h1>
+        <h1>{t("admin.pageTitles.editProduct")}</h1>
         <Link className="button secondary" href="/admin/products">
-          Back
+          {t("admin.common.back")}
         </Link>
       </div>
       <ProductForm
         product={{
           id: data.product.id,
           name: data.product.name,
+          nameVi: data.product.nameVi,
           slug: data.product.slug,
           summary: data.product.summary,
+          summaryVi: data.product.summaryVi,
           description: data.product.description,
+          descriptionVi: data.product.descriptionVi,
           status: data.product.status,
           imageId: data.product.imageId
         }}
