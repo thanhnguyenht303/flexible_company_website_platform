@@ -123,6 +123,118 @@ model PageBuilderDraft {
   updatedAt DateTime @updatedAt
 }
 
+model Form {
+  id                 String           @id @default(cuid())
+  name               String
+  slug               String           @unique
+  description        String?
+  status             PublishStatus    @default(DRAFT)
+  successMessage     String?
+  redirectUrl        String?
+  notificationEmails String[]         @default([])
+  sourceType         String           @default("form")
+  linkedEntityType   String?
+  linkedEntityId     String?
+  settings           Json?
+  fields             FormField[]
+  submissions        FormSubmission[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([status, sourceType])
+}
+
+model FormField {
+  id          String   @id @default(cuid())
+  formId      String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  type        String
+  label       String
+  key         String
+  helpText    String?
+  placeholder String?
+  required    Boolean  @default(false)
+  options     Json?
+  validation  Json?
+  defaultValue String?
+  internalLabel String?
+  sortOrder   Int      @default(0)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([formId, key])
+  @@index([formId, sortOrder])
+}
+
+model FormSubmission {
+  id          String   @id @default(cuid())
+  formId      String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  values      Json
+  files       Json?
+  sourceType  String?
+  sourceId    String?
+  status      String   @default("NEW")
+  ipAddress   String?
+  userAgent   String?
+  leadId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([formId, createdAt])
+  @@index([status, createdAt])
+}
+
+model Lead {
+  id            String   @id @default(cuid())
+  submissionId  String?
+  name          String?
+  email         String?
+  phone         String?
+  companyName   String?
+  sourceType    String   @default("form")
+  sourceId      String?
+  sourceFormId  String?
+  status        String   @default("NEW")
+  priority      String   @default("NORMAL")
+  assignedToId  String?
+  internalNote  String?
+  followUpAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([priority, createdAt])
+  @@index([sourceType, sourceId])
+  @@index([sourceFormId])
+}
+
+model QaItem {
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  question       String
+  answer         String?
+  submitterName  String?
+  submitterEmail String?
+  category       String?
+  status         String   @default("NEW")
+  sourceType     String?  @default("qa")
+  sourceId       String?
+  sourceFormId   String?
+  submissionId   String?
+  leadId         String?
+  relatedType    String?
+  relatedId      String?
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([category])
+}
+
 model Category {
   id          String   @id @default(cuid())
   name        String

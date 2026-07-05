@@ -1,6 +1,6 @@
-# Image Storage Setup
+# Image Storage
 
-The platform stores uploaded images outside the Next.js app folder so images can survive app rebuilds, deployments, and code updates.
+The platform stores uploaded public images outside the Next.js app folder so media survives app rebuilds, deployments, and code updates. Images are stored on disk under `IMAGE_STORAGE_ROOT`, while metadata and relationships are stored in the `MediaAsset` table.
 
 ## Local Folder Location
 
@@ -22,9 +22,15 @@ Because `Images` is a sibling of the app folder, local `.env` should use:
 IMAGE_STORAGE_ROOT=../Images
 ```
 
+For Docker Compose, the sibling `../Images` folder is mounted to `/app/Images`, and `docker-compose.yml` sets:
+
+```env
+IMAGE_STORAGE_ROOT=/app/Images
+```
+
 ## Required Folder Structure
 
-Create this structure before using uploads:
+Create this top-level structure before using uploads:
 
 ```text
 Images/
@@ -34,138 +40,162 @@ Images/
   team/
   logos/
   theme-backgrounds/
+  page-builder/
   general/
 ```
 
 Current behavior:
 
-- Post featured images are saved in `Images/posts/<post-id>/`.
+- Post featured and inline images are saved in `Images/posts/<post-id>/`.
 - Product gallery images are saved in `Images/products/<product-id>/`.
 - Service gallery images are saved in `Images/services/<service-id>/`.
-- Team or employee photos are saved in `Images/team/<team-member-id>/`.
+- Team photos are saved in `Images/team/<team-member-id>/`.
 - Footer collaborator logos are saved in `Images/logos/<footer-partner-id>/`.
-- Site logos and favicons can also use `Images/logos/`.
-- Shared images, brochures, or uncategorized uploads should later save in `Images/general/`.
+- Site logos are saved in `Images/logos/site/`.
+- Theme background images are saved in `Images/theme-backgrounds/site/`.
+- Visual page-builder uploads are saved in `Images/page-builder/<page-slug>/`.
+- Shared or uncategorized uploads can use `Images/general/` in future features.
 
 ## Create Folders With PowerShell
 
-Run from anywhere:
+Run from the app folder:
 
 ```powershell
 New-Item -ItemType Directory -Force `
-  D:\Vibe_Coding\Flexible_company_website_platform\Images\posts, `
-  D:\Vibe_Coding\Flexible_company_website_platform\Images\products, `
-  D:\Vibe_Coding\Flexible_company_website_platform\Images\services, `
-  D:\Vibe_Coding\Flexible_company_website_platform\Images\team, `
-  D:\Vibe_Coding\Flexible_company_website_platform\Images\logos, `
-  D:\Vibe_Coding\Flexible_company_website_platform\Images\general
+  ..\Images\posts, `
+  ..\Images\products, `
+  ..\Images\services, `
+  ..\Images\team, `
+  ..\Images\logos, `
+  ..\Images\theme-backgrounds, `
+  ..\Images\page-builder, `
+  ..\Images\general
 ```
 
-## Environment Variable
+## Accepted Image Files
 
-Add this to `.env`:
+The storage helper currently accepts and signature-checks:
+
+- JPG: `image/jpeg`
+- PNG: `image/png`
+- WEBP: `image/webp`
+
+The maximum file size is controlled by:
 
 ```env
-IMAGE_STORAGE_ROOT=../Images
+MAX_UPLOAD_MB=10
 ```
 
-For production without Docker, use an absolute path if that is clearer:
+SVG files are not accepted by `saveEntityImage`.
 
-```env
-IMAGE_STORAGE_ROOT=/var/www/company-site/Images
+## Serving Images
+
+The database stores media metadata in `MediaAsset`. Public rendering uses:
+
+```text
+/api/media/<media-id>
 ```
 
-For Docker Compose, the app container maps the sibling `../Images` folder to `/app/Images`, and `docker-compose.yml` sets:
+The app never exposes raw disk paths. The media route resolves the stored relative path under `IMAGE_STORAGE_ROOT`, sets the asset MIME type, sends `X-Content-Type-Options: nosniff`, and uses long-lived immutable cache headers.
 
-```env
-IMAGE_STORAGE_ROOT=/app/Images
-```
+## Upload Flows
 
-## How Post Uploads Work
+### Posts
 
-When an admin uploads a featured image for a post:
+When an admin uploads a featured or inline post image:
 
 1. The post is created or updated.
-2. Large JPG, PNG, and WEBP files are downscaled in the browser before upload.
-3. The uploaded image is validated as JPG, PNG, WEBP, or SVG.
+2. The uploaded image is validated as JPG, PNG, or WEBP.
+3. The file signature is checked against the declared MIME type.
 4. The file is saved under `Images/posts/<post-id>/`.
 5. A `MediaAsset` database record is created.
-6. The post stores the media record id in `featuredImageId`.
-7. The app serves the image through `/api/media/<media-id>`.
+6. Featured images are linked through `featuredImageId`.
+7. Inline images replace `post-image:<token>` placeholders in post content.
 
-The public website does not expose raw disk paths.
+### Products and Services
 
-## How Product Gallery Uploads Work
+Product and service galleries use the same storage pattern:
 
-When an admin uploads product images:
-
-1. The product is created or updated.
-2. One or more image files are validated as JPG, PNG, WEBP, or SVG.
-3. Files are saved under `Images/products/<product-id>/`.
-4. A `MediaAsset` database record is created for each image.
-5. The product stores all media ids in `gallery`.
-6. The first gallery image is stored in `imageId` and used as the product thumbnail.
-7. The admin can remove individual images while editing the product.
-8. Deleting a product removes its product image folder and related media records.
-
-## How Service Gallery Uploads Work
-
-Service galleries use the same pattern as product galleries:
-
-1. One or more image files are uploaded while creating or editing a service.
-2. Files are saved under `Images/services/<service-id>/`.
+1. One or more images are uploaded while creating or editing the record.
+2. Files are saved under `Images/products/<product-id>/` or `Images/services/<service-id>/`.
 3. A `MediaAsset` database record is created for each image.
-4. The service stores all media ids in `gallery`.
-5. The first gallery image is stored in `imageId` and used as the service thumbnail.
-6. The admin can remove individual images while editing the service.
-7. Deleting a service removes its service image folder and related media records.
+4. The record stores all media ids in `gallery`.
+5. The first retained gallery image is stored in `imageId` and used as the thumbnail.
+6. Admin updates can remove individual gallery images with `removeImageIds`.
+7. Deleting the product or service removes its image folder and related media records.
 
-## How Team Photo Uploads Work
+### Team Photos
 
-When an admin creates or edits an employee:
+When an admin creates or edits a team member:
 
-1. The employee record is created or updated.
-2. The uploaded employee photo is validated as JPG, PNG, WEBP, or SVG.
-3. The file is saved under `Images/team/<team-member-id>/`.
-4. A `MediaAsset` database record is created.
-5. The employee stores the media id in `photoId`.
-6. Uploading a new photo replaces the previous photo.
-7. Deleting an employee removes the employee image folder and related media records.
+1. The uploaded photo is validated as JPG, PNG, or WEBP.
+2. The file is saved under `Images/team/<team-member-id>/`.
+3. A `MediaAsset` record is created.
+4. The team member stores the media id in `photoId`.
+5. Uploading a new photo replaces the previous photo.
+6. Deleting a team member removes the team image folder and related media records.
 
-## How Footer Collaborator Logos Work
+### Site Logo
+
+Site settings can upload a logo:
+
+1. The logo is sent to `/api/admin/settings/site` as `logo`.
+2. The file is saved under `Images/logos/site/`.
+3. A `MediaAsset` record is created.
+4. The site settings row stores the media id in `logoId`.
+5. Replacing the logo deletes the old `logos/site/` asset when it belongs to that folder.
+
+### Theme Background
+
+Theme settings can upload or remove a background image:
+
+1. The image is sent to `/api/admin/settings/theme` as `backgroundImage`.
+2. The file is saved under `Images/theme-backgrounds/site/`.
+3. A `MediaAsset` record is created.
+4. The theme settings row stores the media id in `backgroundImageId`.
+5. Sending `removeBackgroundImage=true` removes the current background image.
+
+### Footer Collaborator Logos
 
 When an admin adds a company or business to the public footer:
 
 1. The footer collaborator record is created from Admin > Footer.
 2. A logo is required when creating the record.
-3. The admin drags and zooms the logo inside a fixed 3:2 crop area.
-4. The browser saves the selected crop as a normalized PNG before upload.
-5. The uploaded logo is validated as an image file.
-6. The file is saved under `Images/logos/<footer-partner-id>/`.
-7. A `MediaAsset` database record is created.
-8. The footer collaborator stores the media id in `logoId`.
-9. Uploading a new logo replaces the previous logo.
-10. Deleting a footer collaborator removes its logo folder and related media records.
+3. The admin UI normalizes the logo crop before upload.
+4. The file is saved under `Images/logos/<footer-partner-id>/`.
+5. A `MediaAsset` record is created.
+6. The footer collaborator stores the media id in `logoId`.
+7. Uploading a new logo replaces the previous logo.
+8. Deleting a footer collaborator removes its logo folder and related media records.
 
-Footer logo display ratio:
+Footer logo crop ratio:
 
 ```text
 3:2
 ```
 
-The rendered logo boxes can scale at different viewport sizes, but every collaborator logo uses this same crop ratio for a consistent footer layout.
+### Page Builder Images
 
-Recommended post image size:
+Visual page-builder images are uploaded through:
 
 ```text
-1600 x 900px
+POST /api/admin/page-builder/<page-slug>/images
 ```
 
-The public post detail page constrains featured images to a readable maximum size and uses `object-fit: contain` so the full image remains visible. Blog cards use cropped 16:9 thumbnails for consistent layout.
+The route stores images under `Images/page-builder/<page-slug>/`, creates a `MediaAsset`, and returns:
+
+```json
+{
+  "id": "media-id",
+  "url": "/api/media/media-id"
+}
+```
 
 ## Backup Recommendation
 
-Back up both the database and the `Images` folder. The database stores metadata and relationships; the `Images` folder stores the actual files.
+Back up both the database and the `Images` folder. The database stores metadata and relationships; the `Images` folder stores the actual image files.
+
+The `pnpm backup:db` script does not currently archive the sibling `../Images` folder, so copy or snapshot it separately.
 
 Example PowerShell copy backup:
 
@@ -179,4 +209,4 @@ Copy-Item `
 
 ## Git Tracking
 
-Do not commit uploaded images by default. The image library is runtime data, similar to a database backup or user uploads. Keep this folder backed up separately.
+Do not commit uploaded images by default. The image library is runtime data, similar to database backups or user uploads. Keep this folder backed up separately.

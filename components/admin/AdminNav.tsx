@@ -9,6 +9,8 @@ import { useLanguage } from "@/components/public/LanguageProvider";
 import {
   BarChart3,
   Briefcase,
+  CircleHelp,
+  ClipboardList,
   FileText,
   Handshake,
   ImageIcon,
@@ -20,6 +22,7 @@ import {
   Settings,
   Shield,
   Users,
+  UserRoundCheck,
   Wrench
 } from "lucide-react";
 
@@ -38,6 +41,9 @@ const links: AdminNavLink[] = [
   { href: "/admin/products", labelKey: "admin.nav.products", icon: Package },
   { href: "/admin/posts", labelKey: "admin.nav.posts", icon: BarChart3 },
   { href: "/admin/careers", labelKey: "admin.nav.careers", icon: Briefcase },
+  { href: "/admin/forms", labelKey: "admin.nav.forms", icon: ClipboardList },
+  { href: "/admin/leads", labelKey: "admin.nav.leads", icon: UserRoundCheck },
+  { href: "/admin/qa", labelKey: "admin.nav.qa", icon: CircleHelp },
   { href: "/admin/team", labelKey: "admin.nav.team", icon: Users },
   { href: "/admin/footer", labelKey: "admin.nav.footer", icon: Handshake },
   { href: "/admin/media", labelKey: "admin.nav.media", icon: ImageIcon },
@@ -59,13 +65,13 @@ export function AdminNav() {
       </div>
       <div className="admin-nav__group">
         <span className="admin-nav__label">{t("admin.groups.content")}</span>
-        {links.slice(4, 10).map((item) => (
+        {links.slice(4, 13).map((item) => (
           <AdminNavItem item={item} pathname={pathname} t={t} key={item.href} />
         ))}
       </div>
       <div className="admin-nav__group">
         <span className="admin-nav__label">{t("admin.groups.admin")}</span>
-        {links.slice(10).map((item) => (
+        {links.slice(13).map((item) => (
           <AdminNavItem item={item} pathname={pathname} t={t} key={item.href} />
         ))}
       </div>

@@ -6,7 +6,7 @@ import type { BuilderBlock } from "@/modules/page-builder/page-builder.types";
 import { sectionsToBuilderBlocks } from "@/modules/page-builder/page-builder.utils";
 
 export default async function HomePage() {
-  const [{ sections, team, services, posts }, language] = await Promise.all([getPublicSiteContext(), getCurrentLanguage()]);
+  const [{ sections, team, services, posts, forms, qaItems }, language] = await Promise.all([getPublicSiteContext(), getCurrentLanguage()]);
   const builderBlocks = sectionsToBuilderBlocks(sections).filter(isCanvasBlock);
 
   return (
@@ -16,7 +16,9 @@ export default async function HomePage() {
         dynamicContent={{
           team,
           services,
-          posts
+          posts,
+          forms,
+          qaItems
         }}
         language={language}
       />

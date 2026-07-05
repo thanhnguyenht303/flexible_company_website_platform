@@ -31,7 +31,10 @@ async function main() {
         "footer.manage": true,
         "careers.manage": true,
         "media.manage": true,
-        "inquiries.manage": true
+        "inquiries.manage": true,
+        "forms.manage": true,
+        "leads.manage": true,
+        "qa.manage": true
       }
     }
   });
@@ -128,6 +131,75 @@ async function main() {
       });
     }
   }
+
+  await seedAskQuestionForm();
+}
+
+async function seedAskQuestionForm() {
+  const form = await prisma.form.upsert({
+    where: { slug: "ask-a-question" },
+    update: {},
+    create: {
+      name: "Ask a Question",
+      slug: "ask-a-question",
+      description: "Submit a question for the company team to review and answer.",
+      status: PublishStatus.PUBLISHED,
+      successMessage: "Thanks. Your question has been received.",
+      sourceType: "qa",
+      fields: {
+        create: [
+          {
+            type: "text",
+            label: "Name",
+            key: "name",
+            required: true,
+            sortOrder: 0
+          },
+          {
+            type: "email",
+            label: "Email",
+            key: "email",
+            required: true,
+            sortOrder: 1
+          },
+          {
+            type: "text",
+            label: "Question title",
+            key: "questionTitle",
+            required: true,
+            sortOrder: 2
+          },
+          {
+            type: "textarea",
+            label: "Question",
+            key: "question",
+            required: true,
+            sortOrder: 3
+          },
+          {
+            type: "text",
+            label: "Category",
+            key: "category",
+            required: false,
+            sortOrder: 4
+          }
+        ]
+      }
+    }
+  });
+
+  const fieldCount = await prisma.formField.count({ where: { formId: form.id } });
+  if (fieldCount > 0) return;
+
+  await prisma.formField.createMany({
+    data: [
+      { formId: form.id, type: "text", label: "Name", key: "name", required: true, sortOrder: 0 },
+      { formId: form.id, type: "email", label: "Email", key: "email", required: true, sortOrder: 1 },
+      { formId: form.id, type: "text", label: "Question title", key: "questionTitle", required: true, sortOrder: 2 },
+      { formId: form.id, type: "textarea", label: "Question", key: "question", required: true, sortOrder: 3 },
+      { formId: form.id, type: "text", label: "Category", key: "category", required: false, sortOrder: 4 }
+    ]
+  });
 }
 
 main()

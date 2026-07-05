@@ -3,13 +3,14 @@ import { PublishStatus } from "@prisma/client";
 import { defaultHomeSections, defaultSite } from "@/config/default-site";
 import { defaultTheme, radiusMap } from "@/config/default-theme";
 import { prisma } from "@/lib/db";
+import { toPublicForm } from "@/modules/forms/forms.service";
 
 export type PublicSiteContext = Awaited<ReturnType<typeof getPublicSiteContext>>;
 
 const publicDataWarningLabels = new Set<string>();
 
 export async function getPublicSiteContext() {
-  const [site, theme, homePage, services, products, posts, team] = await Promise.all([
+  const [site, theme, homePage, services, products, posts, team, forms, qaItems] = await Promise.all([
     safelyLoadPublicData("site settings", () => prisma.siteSetting.findFirst(), null),
     getThemeSetting(),
     safelyLoadPublicData(
@@ -59,6 +60,27 @@ export async function getPublicSiteContext() {
           orderBy: { sortOrder: "asc" }
         }),
       []
+    ),
+    safelyLoadPublicData(
+      "forms",
+      () =>
+        prisma.form.findMany({
+          where: { status: PublishStatus.PUBLISHED },
+          include: { fields: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] } },
+          orderBy: { name: "asc" },
+          take: 50
+        }),
+      []
+    ),
+    safelyLoadPublicData(
+      "Q&A",
+      () =>
+        prisma.qaItem.findMany({
+          where: { status: "PUBLISHED" },
+          orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+          take: 50
+        }),
+      []
     )
   ]);
 
@@ -69,7 +91,9 @@ export async function getPublicSiteContext() {
     services,
     products,
     posts,
-    team
+    team,
+    forms: forms.map(toPublicForm),
+    qaItems
   };
 }
 

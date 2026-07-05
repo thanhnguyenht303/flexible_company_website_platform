@@ -15,7 +15,9 @@ type Params = {
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
   const user = await requireAdminUser();
-  if (!hasPermission(user, "careers.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
+  if (!hasPermission(user, "careers.manage") && !hasPermission(user, "leads.manage") && !hasPermission(user, "forms.manage")) {
+    return fail("FORBIDDEN", "Forbidden.", 403);
+  }
 
   const file = await prisma.fileAsset.findUnique({ where: { id } });
   if (!file) return fail("NOT_FOUND", "File not found.", 404);

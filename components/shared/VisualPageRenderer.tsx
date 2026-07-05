@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { DynamicForm } from "@/components/public/DynamicForm";
 import { InfiniteLoopScroller } from "@/components/shared/InfiniteLoopScroller";
 import { localizedField } from "@/lib/i18n/content";
 import { defaultLanguage, translate, type Language } from "@/lib/i18n/translations";
 import { slugify } from "@/lib/slug";
+import type { PublicForm } from "@/modules/forms/forms.types";
 import type { BuilderBlock } from "@/modules/page-builder/page-builder.types";
 
 export type DynamicBuilderContent = {
@@ -32,6 +34,15 @@ export type DynamicBuilderContent = {
     content?: string | null;
     contentVi?: string | null;
     featuredImageId?: string | null;
+  }>;
+  forms?: PublicForm[];
+  qaItems?: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    question: string;
+    answer?: string | null;
+    category?: string | null;
   }>;
 };
 
@@ -267,7 +278,54 @@ function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilder
       return <DynamicContentBlock block={block} items={dynamicContent?.services ?? []} kind="services" language={language} />;
     case "blog":
       return <DynamicContentBlock block={block} items={dynamicContent?.posts ?? []} kind="blog" language={language} />;
+    case "form": {
+      const form = findBlockForm(block, dynamicContent?.forms ?? []);
+      if (!form) return <div className="builder-form-placeholder">{block.text || "Select a published form."}</div>;
+      return (
+        <DynamicForm
+          form={form}
+          titleOverride={block.title}
+          descriptionOverride={block.formDescriptionOverride || undefined}
+          submitLabel={block.submitButtonText || "Submit"}
+          layout={block.formLayout ?? "stacked"}
+          sourceType={block.sourceType || "page-builder"}
+          sourceId={block.sourceId || block.id}
+        />
+      );
+    }
+    case "qa":
+      return <QaBlock block={block} items={dynamicContent?.qaItems ?? []} language={language} />;
   }
+}
+
+function QaBlock({ block, items, language }: { block: BuilderBlock; items: NonNullable<DynamicBuilderContent["qaItems"]>; language: Language }) {
+  const filtered = items
+    .filter((item) => !block.qaCategory || item.category === block.qaCategory)
+    .slice(0, block.qaLimit ?? 6);
+
+  return (
+    <div className="builder-qa-block">
+      <div className="builder-dynamic-header">
+        {block.title ? (
+          <h2 className="builder-title-text builder-dynamic-title">
+            {(block.titleLinkEnabled ?? true) ? <Link href={block.titleLinkUrl || "/qa"}>{block.title}</Link> : block.title}
+          </h2>
+        ) : null}
+        {(block.titleLinkEnabled ?? true) ? <Link className="builder-dynamic-view-all" href={block.titleLinkUrl || "/qa"}>View all</Link> : null}
+      </div>
+      <div className={`qa-list qa-list--embedded qa-list--${block.qaLayout ?? "cards"}`}>
+        {filtered.map((item) => (
+          <Link className="card qa-card" href={`/qa/${item.slug}`} key={item.id}>
+            {item.category ? <span className="badge">{item.category}</span> : null}
+            <h3 className="builder-title-text">{item.title}</h3>
+            <p className="builder-body-text">{item.question}</p>
+          </Link>
+        ))}
+        {!filtered.length ? <p className="message">No published questions yet.</p> : null}
+      </div>
+      {block.showAskQuestionButton ?? true ? <Link className="button secondary" href="/qa#ask-question">{translate(language, "formsFeature.qa.askQuestion")}</Link> : null}
+    </div>
+  );
 }
 
 function DynamicContentBlock({
@@ -424,6 +482,15 @@ function getDefaultDynamicRoute(kind: "team" | "services" | "blog") {
   if (kind === "team") return "/team";
   if (kind === "services") return "/services";
   return "/blog";
+}
+
+function findBlockForm(block: BuilderBlock, forms: PublicForm[]) {
+  if (block.formId) {
+    const form = forms.find((item) => item.id === block.formId);
+    if (form) return form;
+  }
+  if (block.formSlug) return forms.find((item) => item.slug === block.formSlug) ?? null;
+  return forms[0] ?? null;
 }
 
 function getBuilderDynamicTitle(title: string | undefined, kind: "team" | "services" | "blog", language: Language) {

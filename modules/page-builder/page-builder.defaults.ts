@@ -163,6 +163,34 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         titleLinkEnabled: true,
         titleLinkUrl: "/blog"
       };
+    case "form":
+      return {
+        ...base,
+        title: "Contact form",
+        text: "Choose a published form in the inspector.",
+        width: "normal",
+        canvasHeight: 520,
+        formLayout: "stacked",
+        submitButtonText: "Submit",
+        formDescriptionOverride: "",
+        sourceType: "page-builder",
+        borderRadius: 10,
+        shadow: "soft"
+      };
+    case "qa":
+      return {
+        ...base,
+        title: "Questions & Answers",
+        width: "wide",
+        canvasHeight: 340,
+        qaLimit: 6,
+        qaLayout: "cards",
+        showAskQuestionButton: true,
+        titleLinkEnabled: true,
+        titleLinkUrl: "/qa",
+        borderRadius: 10,
+        shadow: "none"
+      };
   }
 }
 

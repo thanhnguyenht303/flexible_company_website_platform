@@ -45,7 +45,7 @@ export default async function AdminPageBuilderPage({ params }: { params: Promise
   const result = await getPage(slug);
   if (!result) notFound();
   const { page, draft } = result;
-  const [{ team, services, posts }, { t }] = await Promise.all([getPublicSiteContext(), getServerTranslations()]);
+  const [{ team, services, posts, forms, qaItems }, { t }] = await Promise.all([getPublicSiteContext(), getServerTranslations()]);
   const dynamicContent = {
     team: team.map((member) => ({
       id: "id" in member ? member.id : null,
@@ -73,6 +73,15 @@ export default async function AdminPageBuilderPage({ params }: { params: Promise
       content: post.content,
       contentVi: "contentVi" in post ? post.contentVi : null,
       featuredImageId: "featuredImageId" in post ? post.featuredImageId : null
+    })),
+    forms,
+    qaItems: qaItems.map((item) => ({
+      id: item.id,
+      title: item.title,
+      slug: item.slug,
+      question: item.question,
+      answer: item.answer,
+      category: item.category
     }))
   };
   const draftBlocks = Array.isArray(draft?.blocks) ? (draft.blocks as BuilderBlock[]) : null;

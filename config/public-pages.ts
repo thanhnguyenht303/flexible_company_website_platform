@@ -5,6 +5,7 @@ export const publicPages = [
   { slug: "team", title: "Team", href: "/team", showInHeader: true },
   { slug: "careers", title: "Careers", href: "/careers", showInHeader: true },
   { slug: "blog", title: "Blog", href: "/blog", showInHeader: true },
+  { slug: "qa", title: "Q&A", href: "/qa", showInHeader: true },
   { slug: "contact", title: "Contact", href: "/contact", showInHeader: true },
   { slug: "privacy", title: "Privacy", href: "/privacy", showInHeader: false }
 ] as const;

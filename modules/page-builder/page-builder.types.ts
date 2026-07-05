@@ -11,7 +11,9 @@ export type BuilderBlockType =
   | "contactCta"
   | "team"
   | "services"
-  | "blog";
+  | "blog"
+  | "form"
+  | "qa";
 
 export type BuilderWidth = "narrow" | "normal" | "wide" | "full";
 export type BuilderAlign = "left" | "center" | "right";
@@ -106,4 +108,15 @@ export type BuilderBlock = {
   autoScrollSpeed?: number;
   titleLinkEnabled?: boolean;
   titleLinkUrl?: string;
+  formId?: string;
+  formSlug?: string;
+  formLayout?: "stacked" | "two-column" | "compact";
+  formDescriptionOverride?: string;
+  submitButtonText?: string;
+  sourceType?: string;
+  sourceId?: string;
+  qaCategory?: string;
+  qaLimit?: number;
+  qaLayout?: "cards" | "list" | "accordion";
+  showAskQuestionButton?: boolean;
 };

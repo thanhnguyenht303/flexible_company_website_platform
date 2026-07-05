@@ -15,7 +15,9 @@ import {
   Send,
   SquareDashedMousePointer,
   Trash2,
-  Type
+  Type,
+  ClipboardList,
+  CircleHelp
 } from "lucide-react";
 import { useLanguage } from "@/components/public/LanguageProvider";
 import { getVisualCanvasHeight, VisualPageRenderer } from "@/components/shared/VisualPageRenderer";
@@ -84,7 +86,7 @@ const snapSize = 8;
 
 type AdminTranslator = (key: string, values?: TranslationValues) => string;
 
-const palette: Array<{ type: BuilderBlockType; icon: "text" | "image" | "pointer" }> = [
+const palette: Array<{ type: BuilderBlockType; icon: "text" | "image" | "pointer" | "form" | "help" }> = [
   { type: "hero", icon: "text" },
   { type: "text", icon: "text" },
   { type: "image", icon: "image" },
@@ -97,7 +99,9 @@ const palette: Array<{ type: BuilderBlockType; icon: "text" | "image" | "pointer
   { type: "contactCta", icon: "pointer" },
   { type: "team", icon: "text" },
   { type: "services", icon: "text" },
-  { type: "blog", icon: "text" }
+  { type: "blog", icon: "text" },
+  { type: "form", icon: "form" },
+  { type: "qa", icon: "help" }
 ];
 
 const fontSizes = [12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64];
@@ -420,7 +424,7 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
         <div className="visual-builder-palette">
           {palette.map((item) => (
             <button type="button" key={item.type} onClick={() => setPendingContentRect(makeDefaultRect(blocks.length))}>
-              {item.icon === "image" ? <ImageIcon size={16} /> : item.icon === "pointer" ? <MousePointer2 size={16} /> : <Type size={16} />}
+              <PaletteIcon icon={item.icon} />
               {getBlockTypeLabel(item.type, t)}
             </button>
           ))}
@@ -626,7 +630,7 @@ function ContentTypeDialog({ rect, onSelect, onCancel }: { rect: CanvasRect; onS
         <div className="visual-builder-content-types">
           {palette.map((item) => (
             <button className="button secondary" type="button" key={item.type} onClick={() => onSelect(item.type)}>
-              {item.icon === "image" ? <ImageIcon size={16} /> : item.icon === "pointer" ? <MousePointer2 size={16} /> : <Type size={16} />}
+              <PaletteIcon icon={item.icon} />
               {getBlockTypeLabel(item.type, t)}
             </button>
           ))}
@@ -760,6 +764,65 @@ function BlockInspector({
       ) : null}
 
       {block.type === "cards" ? <CardEditor block={block} onChange={onChange} /> : null}
+
+      {block.type === "form" ? (
+        <InspectorGroup title={t("formsFeature.forms.openPublicForm")}>
+          <div className="field">
+            <label htmlFor="builder-form">{t("formsFeature.forms.title")}</label>
+            <select
+              id="builder-form"
+              value={block.formId ?? ""}
+              onChange={(event) => {
+                const selectedForm = dynamicContent?.forms?.find((form) => form.id === event.target.value);
+                onChange({ formId: selectedForm?.id ?? "", formSlug: selectedForm?.slug ?? "" });
+              }}
+            >
+              <option value="">{t("formsFeature.common.all")}</option>
+              {(dynamicContent?.forms ?? []).map((form) => (
+                <option value={form.id} key={form.id}>
+                  {form.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="builder-form-layout">{t("admin.builder.layout")}</label>
+            <select id="builder-form-layout" value={block.formLayout ?? "stacked"} onChange={(event) => onChange({ formLayout: event.target.value as BuilderBlock["formLayout"] })}>
+              <option value="stacked">Stacked</option>
+              <option value="two-column">Two column</option>
+              <option value="compact">Compact</option>
+            </select>
+          </div>
+          <Field label={t("formsFeature.forms.descriptionLabel")} value={block.formDescriptionOverride ?? ""} onChange={(value) => onChange({ formDescriptionOverride: value })} />
+          <Field label={t("formsFeature.publicForm.submit")} value={block.submitButtonText ?? t("formsFeature.publicForm.submit")} onChange={(value) => onChange({ submitButtonText: value })} />
+          <Field label={t("formsFeature.common.sourceType")} value={block.sourceType ?? "page-builder"} onChange={(value) => onChange({ sourceType: value })} />
+        </InspectorGroup>
+      ) : null}
+
+      {block.type === "qa" ? (
+        <InspectorGroup title={t("formsFeature.qa.title")}>
+          <p className="field-help">{getDynamicContentCount(block.type, dynamicContent)} published questions available.</p>
+          <div className="field">
+            <label htmlFor="builder-qa-layout">{t("admin.builder.layout")}</label>
+            <select id="builder-qa-layout" value={block.qaLayout ?? "cards"} onChange={(event) => onChange({ qaLayout: event.target.value as BuilderBlock["qaLayout"] })}>
+              <option value="cards">Cards</option>
+              <option value="list">List</option>
+              <option value="accordion">Accordion</option>
+            </select>
+          </div>
+          <Field label={t("formsFeature.common.category")} value={block.qaCategory ?? ""} onChange={(value) => onChange({ qaCategory: value })} />
+          <NumberField label={t("formsFeature.common.view")} value={block.qaLimit ?? 6} min={1} max={24} step={1} suffix="" onChange={(value) => onChange({ qaLimit: value })} />
+          <label className="checkbox-field">
+            <input checked={block.showAskQuestionButton ?? true} type="checkbox" onChange={(event) => onChange({ showAskQuestionButton: event.target.checked })} />
+            {t("formsFeature.qa.askQuestion")}
+          </label>
+          <label className="checkbox-field">
+            <input checked={block.titleLinkEnabled ?? true} type="checkbox" onChange={(event) => onChange({ titleLinkEnabled: event.target.checked })} />
+            {t("admin.builder.linkSectionTitle")}
+          </label>
+          <Field label={t("admin.builder.titleLinkUrl")} value={block.titleLinkUrl ?? "/qa"} onChange={(value) => onChange({ titleLinkUrl: value })} />
+        </InspectorGroup>
+      ) : null}
 
       {isDynamicContentType(block.type) ? (
         <InspectorGroup title={t("admin.builder.dynamicContentScroll")}>
@@ -1227,6 +1290,14 @@ function getBlockTypeLabel(type: BuilderBlockType, t: AdminTranslator) {
   return t(`admin.builder.blockTypes.${type}`);
 }
 
+function PaletteIcon({ icon }: { icon: "text" | "image" | "pointer" | "form" | "help" }) {
+  if (icon === "image") return <ImageIcon size={16} />;
+  if (icon === "pointer") return <MousePointer2 size={16} />;
+  if (icon === "form") return <ClipboardList size={16} />;
+  if (icon === "help") return <CircleHelp size={16} />;
+  return <Type size={16} />;
+}
+
 function createBlockId() {
   return globalThis.crypto?.randomUUID?.() ?? `block-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -1239,6 +1310,7 @@ function getDynamicContentCount(type: BuilderBlockType, dynamicContent?: Dynamic
   if (type === "team") return dynamicContent?.team?.length ?? 0;
   if (type === "services") return dynamicContent?.services?.length ?? 0;
   if (type === "blog") return dynamicContent?.posts?.length ?? 0;
+  if (type === "qa") return dynamicContent?.qaItems?.length ?? 0;
   return 0;
 }
 
@@ -1246,6 +1318,7 @@ function getDefaultDynamicRoute(type: BuilderBlockType) {
   if (type === "team") return "/team";
   if (type === "services") return "/services";
   if (type === "blog") return "/blog";
+  if (type === "qa") return "/qa";
   return undefined;
 }
 

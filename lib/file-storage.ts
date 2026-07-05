@@ -8,7 +8,7 @@ const allowedResumeTypes = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 ]);
 
-export type FileEntityType = "job-applications" | "general";
+export type FileEntityType = "job-applications" | "form-submissions" | "general";
 
 export function getFileStorageRoot() {
   return path.resolve(process.env.FILE_STORAGE_ROOT ?? path.join(process.cwd(), "..", "files_storage"));
@@ -64,6 +64,51 @@ export async function saveResumeFile({
   };
 }
 
+export async function savePrivateUploadFile({
+  entityType,
+  entityId,
+  file,
+  allowedTypes = allowedResumeTypes,
+  category = "private-upload"
+}: {
+  entityType: FileEntityType;
+  entityId: string;
+  file: File;
+  allowedTypes?: Set<string>;
+  category?: string;
+}) {
+  if (!file.size) return null;
+
+  if (!allowedTypes.has(file.type)) {
+    throw new Error("This file type is not allowed.");
+  }
+
+  const maxBytes = Number(process.env.MAX_FILE_UPLOAD_MB ?? process.env.MAX_UPLOAD_MB ?? 10) * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new Error(`File exceeds ${process.env.MAX_FILE_UPLOAD_MB ?? process.env.MAX_UPLOAD_MB ?? 10}MB.`);
+  }
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (!matchesAllowedFileSignature(file.type, bytes)) {
+    throw new Error("File content does not match the declared file type.");
+  }
+
+  const safeName = sanitizeFilename(file.name);
+  const relativePath = path.join(entityType, entityId, `${Date.now()}-${randomUUID()}-${safeName}`);
+  const absolutePath = resolveFilePath(relativePath);
+
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, bytes);
+
+  return {
+    relativePath: relativePath.replace(/\\/g, "/"),
+    originalName: file.name,
+    mimeType: file.type,
+    sizeBytes: file.size,
+    category
+  };
+}
+
 export async function deleteStoredFile(relativePath: string) {
   await rm(resolveFilePath(relativePath), { force: true });
 }
@@ -85,6 +130,10 @@ function sanitizeFilename(filename: string) {
 }
 
 function matchesResumeSignature(mimeType: string, bytes: Buffer) {
+  return matchesAllowedFileSignature(mimeType, bytes);
+}
+
+function matchesAllowedFileSignature(mimeType: string, bytes: Buffer) {
   if (mimeType === "application/pdf") {
     return bytes.subarray(0, 4).toString("ascii") === "%PDF";
   }

@@ -1,3 +1,5 @@
 # Blog Module
 
-Owns post validation, permission naming, data operations, and future editor/table components. Public routes show only `PUBLISHED` posts; admin routes can manage draft, published, and archived states.
+Owns post validation, post-related permissions, data operations, and public/admin post behavior.
+
+Posts support draft, published, and archived states. Public routes show only `PUBLISHED` posts. Admin routes manage English/Vietnamese title, excerpt, and content fields, featured images, inline images, slug generation, and publication timestamps.

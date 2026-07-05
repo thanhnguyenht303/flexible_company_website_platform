@@ -27,7 +27,7 @@ const textElementStyleSchema = z.object({
 
 const blockSchema = z.object({
   id: z.string().min(1),
-  type: z.enum(["hero", "text", "image", "button", "banner", "cards", "twoColumn", "divider", "spacer", "contactCta", "team", "services", "blog"]),
+  type: z.enum(["hero", "text", "image", "button", "banner", "cards", "twoColumn", "divider", "spacer", "contactCta", "team", "services", "blog", "form", "qa"]),
   enabled: z.boolean().default(true),
   title: z.string().max(240).optional(),
   subtitle: z.string().max(500).optional(),
@@ -99,7 +99,18 @@ const blockSchema = z.object({
   autoScroll: z.boolean().optional(),
   autoScrollSpeed: z.coerce.number().min(0).max(240).optional(),
   titleLinkEnabled: z.boolean().optional(),
-  titleLinkUrl: publicUrlSchema.optional()
+  titleLinkUrl: publicUrlSchema.optional(),
+  formId: z.string().max(180).optional(),
+  formSlug: z.string().max(220).optional(),
+  formLayout: z.enum(["stacked", "two-column", "compact"]).optional(),
+  formDescriptionOverride: z.string().max(500).optional(),
+  submitButtonText: z.string().max(120).optional(),
+  sourceType: z.string().max(80).optional(),
+  sourceId: z.string().max(180).optional(),
+  qaCategory: z.string().max(120).optional(),
+  qaLimit: z.coerce.number().int().min(1).max(24).optional(),
+  qaLayout: z.enum(["cards", "list", "accordion"]).optional(),
+  showAskQuestionButton: z.boolean().optional()
 });
 
 export const pageBuilderSaveSchema = z.object({

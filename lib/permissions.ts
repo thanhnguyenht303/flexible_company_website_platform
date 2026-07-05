@@ -8,6 +8,9 @@ export type Permission =
   | "team.manage"
   | "footer.manage"
   | "careers.manage"
+  | "forms.manage"
+  | "leads.manage"
+  | "qa.manage"
   | "media.manage"
   | "inquiries.manage"
   | "audit.view";
