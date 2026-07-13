@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fail, ok } from "@/lib/api-response";
 import { requireAdminUser } from "@/lib/auth";
+import { csvCell } from "@/lib/csv";
 import { prisma } from "@/lib/db";
 import { hasPermission } from "@/lib/permissions";
 
@@ -61,8 +62,4 @@ function toCsv(rows: Array<{ id: string; name: string | null; email: string | nu
     ].map(csvCell).join(",")
   );
   return [headers.join(","), ...body].join("\n");
-}
-
-function csvCell(value: string) {
-  return `"${value.replace(/"/g, '""')}"`;
 }

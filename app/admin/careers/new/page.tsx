@@ -7,7 +7,7 @@ export default async function NewJobPostingPage() {
   const { t } = await getServerTranslations();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="careers.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.newJob")}</h1>
         <Link className="button secondary" href="/admin/careers">

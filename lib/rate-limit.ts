@@ -1,3 +1,5 @@
+import { isIP } from "net";
+
 type RateLimitBucket = {
   count: number;
   resetAt: number;
@@ -6,8 +8,19 @@ type RateLimitBucket = {
 const buckets = new Map<string, RateLimitBucket>();
 
 export function getClientIp(request: Request) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwardedFor || request.headers.get("x-real-ip") || "unknown";
+  const realIp = normalizeIp(request.headers.get("x-real-ip"));
+  if (realIp) return realIp;
+
+  const forwardedFor = request.headers.get("x-forwarded-for")
+    ?.split(",")
+    .map((value) => normalizeIp(value))
+    .filter((value): value is string => Boolean(value));
+  return forwardedFor?.at(-1) || "unknown";
+}
+
+function normalizeIp(value: string | null) {
+  const candidate = value?.trim() ?? "";
+  return isIP(candidate) ? candidate : null;
 }
 
 export function checkRateLimit({

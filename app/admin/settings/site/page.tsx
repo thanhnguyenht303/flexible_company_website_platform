@@ -7,7 +7,7 @@ export default async function AdminSiteSettingsPage() {
   const [{ site }, { t }] = await Promise.all([getPublicSiteContext(), getServerTranslations()]);
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="siteSettings.manage">
       <div className="admin-page-header">
         <h1>{t("admin.common.siteSettings")}</h1>
       </div>

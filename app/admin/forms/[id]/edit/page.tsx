@@ -16,7 +16,7 @@ export default async function EditFormPage({ params }: { params: Promise<{ id: s
   if (!form) notFound();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="forms.manage">
       <div className="admin-page-header">
         <h1>{t("formsFeature.forms.editForm")}</h1>
         <Link className="button secondary" href="/admin/forms">

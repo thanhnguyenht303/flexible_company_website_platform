@@ -17,7 +17,10 @@ import {
   Trash2,
   Type,
   ClipboardList,
-  CircleHelp
+  CircleHelp,
+  Images,
+  MonitorPlay,
+  Blocks
 } from "lucide-react";
 import { useLanguage } from "@/components/public/LanguageProvider";
 import { getVisualCanvasHeight, VisualPageRenderer } from "@/components/shared/VisualPageRenderer";
@@ -44,6 +47,7 @@ type VisualPageBuilderProps = {
   initialBlocks: BuilderBlock[];
   dynamicContent?: DynamicBuilderContent;
   hasDraft?: boolean;
+  allowedBlockTypes?: readonly BuilderBlockType[];
 };
 
 type SaveState = {
@@ -86,12 +90,21 @@ const snapSize = 8;
 
 type AdminTranslator = (key: string, values?: TranslationValues) => string;
 
-const palette: Array<{ type: BuilderBlockType; icon: "text" | "image" | "pointer" | "form" | "help" }> = [
+type PaletteIconType = "text" | "image" | "pointer" | "form" | "help" | "gallery" | "video" | "static";
+type BlockPreset = {
+  label: string;
+  patch: Partial<BuilderBlock>;
+};
+
+const palette: Array<{ type: BuilderBlockType; icon: PaletteIconType }> = [
   { type: "hero", icon: "text" },
   { type: "text", icon: "text" },
   { type: "image", icon: "image" },
   { type: "button", icon: "pointer" },
+  { type: "video", icon: "video" },
+  { type: "gallery", icon: "gallery" },
   { type: "banner", icon: "text" },
+  { type: "static", icon: "static" },
   { type: "cards", icon: "text" },
   { type: "twoColumn", icon: "text" },
   { type: "divider", icon: "pointer" },
@@ -104,9 +117,7 @@ const palette: Array<{ type: BuilderBlockType; icon: "text" | "image" | "pointer
   { type: "qa", icon: "help" }
 ];
 
-const fontSizes = [12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64];
-
-export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraft = false }: VisualPageBuilderProps) {
+export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraft = false, allowedBlockTypes }: VisualPageBuilderProps) {
   const { language, t } = useLanguage();
   const canvasRef = useRef<HTMLDivElement>(null);
   const [blocks, setBlocks] = useState<BuilderBlock[]>(initialBlocks);
@@ -123,6 +134,10 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
   const [operation, setOperation] = useState<CanvasOperation | null>(null);
 
   const selectedBlock = blocks.find((block) => block.id === selectedId) ?? null;
+  const visiblePalette = useMemo(
+    () => (allowedBlockTypes ? palette.filter((item) => allowedBlockTypes.includes(item.type)) : palette),
+    [allowedBlockTypes]
+  );
   const pageTitle = page.title || "Home";
   const displayPageTitle = pageTitle === "Home" ? t("nav.home") : pageTitle;
   const publicHref = page.slug === "home" ? "/" : `/${page.slug}`;
@@ -140,6 +155,22 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
   function updateSelected(patch: Partial<BuilderBlock>) {
     if (!selectedBlock) return;
     commit(blocks.map((block) => (block.id === selectedBlock.id ? { ...block, ...patch } : block)));
+  }
+
+  function nudgeBlock(blockId: string, direction: "up" | "right" | "down" | "left", mode: "move" | "resize", step: number) {
+    const block = blocks.find((item) => item.id === blockId);
+    if (!block) return;
+    const rect = getBlockRect(block);
+    const xStep = step / 10;
+    const patch =
+      mode === "resize"
+        ? resizeBlockByKeyboard(rect, direction, xStep, step)
+        : {
+            canvasX: snapPercent(clamp(rect.x + (direction === "right" ? xStep : direction === "left" ? -xStep : 0), 0, 100 - rect.width)),
+            canvasY: snap(clamp(rect.y + (direction === "down" ? step : direction === "up" ? -step : 0), 0, canvasHeight - rect.height))
+          };
+
+    commit(blocks.map((item) => (item.id === blockId ? { ...item, ...patch } : item)), blockId);
   }
 
   function removeSelected() {
@@ -327,6 +358,10 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
 
   function createBlock(type: BuilderBlockType) {
     if (!pendingContentRect) return;
+    if (!isTypeAllowed(type, allowedBlockTypes)) {
+      setState({ status: "error", message: t("admin.builder.blockTypeNotAllowed") });
+      return;
+    }
     const block: BuilderBlock = {
       ...createBuilderBlock(type),
       canvasX: pendingContentRect.x,
@@ -352,6 +387,7 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
 
   function changeSelectedType(type: BuilderBlockType) {
     if (!selectedBlock || selectedBlock.type === type) return;
+    if (!isTypeAllowed(type, allowedBlockTypes)) return;
     const replacement = {
       ...createBuilderBlock(type),
       id: selectedBlock.id,
@@ -417,12 +453,13 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
             {t("admin.builder.resize")}
           </ToolButton>
         </div>
+        <p className="visual-builder-keyboard-help">{t("admin.builder.keyboardHelp")}</p>
         <div className="visual-builder-panel__head">
           <h2>{t("admin.builder.contentTypes")}</h2>
           <p>{t("admin.builder.contentTypesText")}</p>
         </div>
         <div className="visual-builder-palette">
-          {palette.map((item) => (
+          {visiblePalette.map((item) => (
             <button type="button" key={item.type} onClick={() => setPendingContentRect(makeDefaultRect(blocks.length))}>
               <PaletteIcon icon={item.icon} />
               {getBlockTypeLabel(item.type, t)}
@@ -477,7 +514,11 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
           </div>
         </div>
 
-        {state.message ? <p className={`message ${state.status === "error" ? "error" : ""}`}>{state.message}</p> : null}
+        {state.message ? (
+          <p className={`message ${state.status === "error" ? "error" : ""}`} role={state.status === "error" ? "alert" : "status"} aria-live={state.status === "error" ? "assertive" : "polite"}>
+            {state.message}
+          </p>
+        ) : null}
 
         {preview ? (
           <div className="visual-builder-preview">
@@ -517,6 +558,7 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
                 onSelect={() => setSelectedId(block.id)}
                 onMoveStart={(event) => beginOperation(event, block, "move")}
                 onResizeStart={(event, handle) => beginOperation(event, block, "resize", handle)}
+                onKeyboardNudge={(direction, mode, step) => nudgeBlock(block.id, direction, mode, step)}
               />
             ))}
 
@@ -532,6 +574,7 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
           dynamicContent={dynamicContent}
           onChange={updateSelected}
           onTypeChange={changeSelectedType}
+          paletteItems={visiblePalette}
           onDelete={removeSelected}
           onClear={clearCanvas}
           disabled={state.status === "saving"}
@@ -539,7 +582,7 @@ export function VisualPageBuilder({ page, initialBlocks, dynamicContent, hasDraf
       </aside>
 
       {placementConflict ? <PlacementDialog conflict={placementConflict} onResolve={resolvePlacement} /> : null}
-      {pendingContentRect ? <ContentTypeDialog rect={pendingContentRect} onCancel={() => setPendingContentRect(null)} onSelect={createBlock} /> : null}
+      {pendingContentRect ? <ContentTypeDialog rect={pendingContentRect} paletteItems={visiblePalette} onCancel={() => setPendingContentRect(null)} onSelect={createBlock} /> : null}
     </div>
   );
 }
@@ -557,22 +600,37 @@ function CanvasBlock({
   selected,
   onSelect,
   onMoveStart,
-  onResizeStart
+  onResizeStart,
+  onKeyboardNudge
 }: {
   block: BuilderBlock;
   selected: boolean;
   onSelect: () => void;
   onMoveStart: (event: React.PointerEvent) => void;
   onResizeStart: (event: React.PointerEvent, handle: CanvasOperation["handle"]) => void;
+  onKeyboardNudge: (direction: "up" | "right" | "down" | "left", mode: "move" | "resize", step: number) => void;
 }) {
   const { t } = useLanguage();
+  const blockLabel = getBlockTypeLabel(block.type, t);
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const direction = keyToDirection(event.key);
+    if (!direction) return;
+    event.preventDefault();
+    onSelect();
+    onKeyboardNudge(direction, event.altKey ? "resize" : "move", event.shiftKey ? 32 : 8);
+  }
 
   return (
     <div
       className={`visual-builder-canvas-block${selected ? " is-selected" : ""}`}
       style={rectStyle(getBlockRect(block))}
       data-block-type={block.type}
+      role="group"
+      tabIndex={0}
+      aria-label={selected ? t("admin.builder.selectedBlockLabel", { type: blockLabel }) : t("admin.builder.blockControlsLabel", { type: blockLabel })}
       onPointerDown={onMoveStart}
+      onKeyDown={onKeyDown}
       onClick={(event) => {
         event.stopPropagation();
         onSelect();
@@ -619,7 +677,17 @@ function PlacementDialog({ conflict, onResolve }: { conflict: PlacementConflict;
   );
 }
 
-function ContentTypeDialog({ rect, onSelect, onCancel }: { rect: CanvasRect; onSelect: (type: BuilderBlockType) => void; onCancel: () => void }) {
+function ContentTypeDialog({
+  rect,
+  paletteItems,
+  onSelect,
+  onCancel
+}: {
+  rect: CanvasRect;
+  paletteItems: typeof palette;
+  onSelect: (type: BuilderBlockType) => void;
+  onCancel: () => void;
+}) {
   const { t } = useLanguage();
 
   return (
@@ -628,7 +696,7 @@ function ContentTypeDialog({ rect, onSelect, onCancel }: { rect: CanvasRect; onS
         <h2 id="content-title">{t("admin.builder.chooseContent")}</h2>
         <p>{t("admin.builder.area", { width: Math.round(rect.width), height: Math.round(rect.height) })}</p>
         <div className="visual-builder-content-types">
-          {palette.map((item) => (
+          {paletteItems.map((item) => (
             <button className="button secondary" type="button" key={item.type} onClick={() => onSelect(item.type)}>
               <PaletteIcon icon={item.icon} />
               {getBlockTypeLabel(item.type, t)}
@@ -647,6 +715,7 @@ function BlockInspector({
   dynamicContent,
   onChange,
   onTypeChange,
+  paletteItems,
   onDelete,
   onClear,
   disabled
@@ -656,12 +725,14 @@ function BlockInspector({
   dynamicContent?: DynamicBuilderContent;
   onChange: (patch: Partial<BuilderBlock>) => void;
   onTypeChange: (type: BuilderBlockType) => void;
+  paletteItems: typeof palette;
   onDelete: () => void;
   onClear: () => void;
   disabled: boolean;
 }) {
   const { t } = useLanguage();
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
   if (!block) {
@@ -679,6 +750,15 @@ function BlockInspector({
     );
   }
   const currentBlock = block;
+  const hasTitleControl = ["hero", "text", "banner", "cards", "contactCta", "image", "video", "gallery", "static"].includes(block.type);
+  const hasBodyControl = ["text", "banner", "contactCta", "video", "static"].includes(block.type);
+  const hasButtonControl = ["hero", "button", "contactCta"].includes(block.type);
+  const hasTitleTypography = ["hero", "text", "banner", "button", "contactCta", "static"].includes(block.type) || ((block.type === "image" || block.type === "gallery" || block.type === "video") && Boolean(block.title));
+  const hasBodyTypography = ["hero", "text", "banner", "contactCta", "static"].includes(block.type);
+  const hasTextSpacing = ["hero", "text", "banner", "contactCta", "static"].includes(block.type);
+  const hasBodyButtonSpacing = ["hero", "contactCta"].includes(block.type);
+  const canUseDefaultPresets = isDefaultStyleBlock(block.type);
+  const canEditBlockColors = isDefaultColorBlock(block.type);
 
   function updateTextStyle(target: "title" | "body", patch: Partial<BuilderTextElementStyle>) {
     onChange({
@@ -710,6 +790,41 @@ function BlockInspector({
     if (imageInputRef.current) imageInputRef.current.value = "";
   }
 
+  async function uploadGalleryImages(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []).filter((file) => file.size > 0);
+    if (!files.length) return;
+    setUploading(true);
+    const uploadedIds: string[] = [];
+
+    for (const file of files) {
+      const payload = new FormData();
+      payload.set("image", file);
+      const response = await fetch(`/api/admin/page-builder/${pageSlug}/images`, {
+        method: "POST",
+        body: payload
+      });
+      const body = await response.json().catch(() => null);
+      if (response.ok && body?.data?.id) uploadedIds.push(body.data.id);
+    }
+
+    setUploading(false);
+    if (uploadedIds.length) {
+      onChange({
+        galleryImageIds: [...(currentBlock.galleryImageIds ?? []), ...uploadedIds],
+        imageAlt: currentBlock.imageAlt || files[0]?.name || ""
+      });
+    }
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
+  }
+
+  function applyPreset(preset: BlockPreset) {
+    onChange(preset.patch);
+  }
+
+  function resetStyle() {
+    onChange(getStyleResetPatch(currentBlock));
+  }
+
   return (
     <div className="visual-builder-inspector">
       <div className="visual-builder-panel__head">
@@ -720,7 +835,7 @@ function BlockInspector({
       <div className="field">
         <label htmlFor="builder-type">{t("admin.builder.contentType")}</label>
         <select id="builder-type" value={block.type} onChange={(event) => onTypeChange(event.target.value as BuilderBlockType)}>
-          {palette.map((item) => (
+          {paletteItems.map((item) => (
             <option value={item.type} key={item.type}>{getBlockTypeLabel(item.type, t)}</option>
           ))}
         </select>
@@ -731,7 +846,7 @@ function BlockInspector({
         {t("admin.builder.visible")}
       </label>
 
-      {["hero", "text", "banner", "cards", "contactCta", "image"].includes(block.type) ? (
+      {hasTitleControl ? (
         <Field label={t("admin.common.title")} value={block.title ?? ""} onChange={(value) => onChange({ title: value })} />
       ) : null}
 
@@ -739,19 +854,39 @@ function BlockInspector({
         <Field label={t("admin.forms.editor.subtitleLabel")} value={block.subtitle ?? ""} textarea onChange={(value) => onChange({ subtitle: value })} />
       ) : null}
 
-      {["text", "banner", "contactCta"].includes(block.type) ? (
+      {hasBodyControl ? (
         <Field label={t("admin.builder.bodyText")} value={block.text ?? ""} textarea onChange={(value) => onChange({ text: value })} />
       ) : null}
 
-      {["hero", "button", "contactCta"].includes(block.type) ? (
+      {hasButtonControl ? (
         <>
           <Field label={t("admin.builder.buttonText")} value={block.buttonText ?? ""} onChange={(value) => onChange({ buttonText: value })} />
           <Field label={t("admin.builder.buttonUrl")} value={block.buttonUrl ?? ""} onChange={(value) => onChange({ buttonUrl: value })} />
+          <label className="checkbox-field">
+            <input checked={Boolean(block.buttonOpenInNewTab)} type="checkbox" onChange={(event) => onChange({ buttonOpenInNewTab: event.target.checked })} />
+            {t("admin.builder.openInNewTab")}
+          </label>
         </>
       ) : null}
 
       {block.type === "image" ? (
         <ImageControls block={block} uploading={uploading} inputRef={imageInputRef} onUpload={uploadImage} onChange={onChange} />
+      ) : null}
+
+      {block.type === "video" ? (
+        <InspectorGroup title={t("admin.builder.video")}>
+          <Field label={t("admin.builder.videoUrl")} value={block.videoUrl ?? ""} onChange={(value) => onChange({ videoUrl: value })} placeholder="https://www.youtube.com/watch?v=..." />
+        </InspectorGroup>
+      ) : null}
+
+      {block.type === "gallery" ? (
+        <GalleryControls
+          block={block}
+          uploading={uploading}
+          inputRef={galleryInputRef}
+          onUpload={uploadGalleryImages}
+          onChange={onChange}
+        />
       ) : null}
 
       {block.type === "twoColumn" ? (
@@ -875,54 +1010,76 @@ function BlockInspector({
         <NumberField label={t("admin.builder.height")} value={block.canvasHeight ?? 180} min={minBlockHeight} max={2000} step={8} onChange={(value) => onChange({ canvasHeight: value })} />
       </InspectorGroup>
 
-      <TextStyleControls
-        title={t("admin.builder.titleText")}
-        idPrefix="title-text"
-        style={block.textStyle?.title}
-        fallback={{
-          fontFamily: block.fontFamily ?? "",
-          fontSize: block.type === "hero" ? 48 : Math.max(20, Math.round((block.fontSize ?? 18) * 1.45)),
-          fontWeight: block.bold ? 800 : 700,
-          color: block.color ?? "",
-          lineHeight: block.lineHeight ?? 1.15,
-          letterSpacing: block.letterSpacing ?? 0,
-          align: block.align ?? "left",
-          wrap: false
-        }}
-        showWrap
-        onChange={(patch) => updateTextStyle("title", patch)}
-      />
+      {canUseDefaultPresets ? <BlockPresetControls block={block} onApply={applyPreset} /> : null}
 
-      <TextStyleControls
-        title={t("admin.builder.bodyText")}
-        idPrefix="body-text"
-        style={block.textStyle?.body}
-        fallback={{
-          fontFamily: block.fontFamily ?? "",
-          fontSize: block.fontSize ?? 18,
-          fontWeight: block.bold ? 700 : 400,
-          color: block.color ?? "",
-          lineHeight: block.lineHeight ?? 1.55,
-          letterSpacing: block.letterSpacing ?? 0,
-          align: block.align ?? "left"
-        }}
-        onChange={(patch) => updateTextStyle("body", patch)}
-      />
+      {canEditBlockColors ? (
+        <BlockColorControls block={block} onChange={onChange} onTextStyleChange={updateTextStyle} />
+      ) : null}
 
-      <InspectorGroup title={t("admin.builder.paragraph")}>
-        <NumberField label={t("admin.builder.paragraphSpacing")} value={block.paragraphSpacing ?? 14} min={0} max={80} onChange={(value) => onChange({ paragraphSpacing: value })} />
-      </InspectorGroup>
+      {hasTitleTypography ? (
+        <TextStyleControls
+          title={t("admin.builder.titleStyle")}
+          style={block.textStyle?.title}
+          fallback={{
+            fontFamily: block.fontFamily ?? "",
+            fontSize: block.type === "hero" ? 48 : block.type === "button" ? 16 : Math.max(20, Math.round((block.fontSize ?? 18) * 1.45)),
+            fontWeight: block.bold ? 800 : 700,
+            color: block.color ?? "",
+            lineHeight: block.lineHeight ?? 1.15,
+            letterSpacing: block.letterSpacing ?? 0,
+            align: block.align ?? "left",
+            wrap: false
+          }}
+          fontSizeLabel={block.type === "button" ? t("admin.builder.buttonFontSize") : t("admin.builder.titleFontSize")}
+          minFontSize={block.type === "button" ? 10 : 12}
+          maxFontSize={block.type === "button" ? 60 : 160}
+          showWrap
+          onChange={(patch) => updateTextStyle("title", patch)}
+        />
+      ) : null}
+
+      {hasBodyTypography ? (
+        <TextStyleControls
+          title={t("admin.builder.bodyStyle")}
+          style={block.textStyle?.body}
+          fallback={{
+            fontFamily: block.fontFamily ?? "",
+            fontSize: block.fontSize ?? 18,
+            fontWeight: block.bold ? 700 : 400,
+            color: block.color ?? "",
+            lineHeight: block.lineHeight ?? 1.55,
+            letterSpacing: block.letterSpacing ?? 0,
+            align: block.align ?? "left"
+          }}
+          fontSizeLabel={t("admin.builder.bodyFontSize")}
+          minFontSize={10}
+          maxFontSize={80}
+          onChange={(patch) => updateTextStyle("body", patch)}
+        />
+      ) : null}
+
+      {hasTextSpacing || block.type !== "divider" ? (
+        <InspectorGroup title={t("admin.builder.spacing")}>
+          {hasTextSpacing ? <NumberField label={t("admin.builder.titleBodySpacing")} value={block.titleBodyGap ?? 16} min={0} max={120} onChange={(value) => onChange({ titleBodyGap: value })} /> : null}
+          {hasBodyButtonSpacing ? <NumberField label={t("admin.builder.bodyButtonSpacing")} value={block.bodyButtonGap ?? 24} min={0} max={120} onChange={(value) => onChange({ bodyButtonGap: value })} /> : null}
+          {hasBodyTypography ? <NumberField label={t("admin.builder.paragraphSpacing")} value={block.paragraphSpacing ?? 14} min={0} max={80} onChange={(value) => onChange({ paragraphSpacing: value })} /> : null}
+          {block.type !== "spacer" ? <NumberField label={t("admin.builder.elementGap")} value={block.gap ?? 16} min={0} max={120} onChange={(value) => onChange({ gap: value })} /> : null}
+          <NumberField label={block.type === "spacer" ? t("admin.builder.height") : t("admin.builder.blockPadding")} value={block.type === "spacer" ? block.height ?? 48 : block.padding ?? 24} min={0} max={block.type === "spacer" ? 240 : 120} onChange={(value) => onChange(block.type === "spacer" ? { height: value } : { padding: value })} />
+        </InspectorGroup>
+      ) : null}
 
       <InspectorGroup title={t("admin.builder.layout")}>
-        <div className="field">
-          <label htmlFor="builder-direction">{t("admin.builder.contentDirection")}</label>
-          <select id="builder-direction" value={block.contentDirection ?? "horizontal"} onChange={(event) => onChange({ contentDirection: event.target.value as BuilderDirection })}>
-            <option value="horizontal">{t("admin.builder.horizontal")}</option>
-            <option value="vertical">{t("admin.builder.vertical")}</option>
-            <option value="horizontal-reverse">{t("admin.builder.reverseHorizontal")}</option>
-            <option value="vertical-reverse">{t("admin.builder.reverseVertical")}</option>
-          </select>
-        </div>
+        {block.type !== "spacer" && block.type !== "divider" ? (
+          <div className="field">
+            <label htmlFor="builder-direction">{t("admin.builder.contentDirection")}</label>
+            <select id="builder-direction" value={block.contentDirection ?? "horizontal"} onChange={(event) => onChange({ contentDirection: event.target.value as BuilderDirection })}>
+              <option value="horizontal">{t("admin.builder.horizontal")}</option>
+              <option value="vertical">{t("admin.builder.vertical")}</option>
+              <option value="horizontal-reverse">{t("admin.builder.reverseHorizontal")}</option>
+              <option value="vertical-reverse">{t("admin.builder.reverseVertical")}</option>
+            </select>
+          </div>
+        ) : null}
         <div className="field">
           <label htmlFor="builder-align">{t("admin.builder.horizontalAlign")}</label>
           <select id="builder-align" value={block.align ?? "left"} onChange={(event) => onChange({ align: event.target.value as BuilderAlign })}>
@@ -939,17 +1096,34 @@ function BlockInspector({
             <option value="bottom">{t("admin.builder.bottom")}</option>
           </select>
         </div>
-        <NumberField label={t("admin.builder.gap")} value={block.gap ?? 16} min={0} max={120} onChange={(value) => onChange({ gap: value })} />
-        <NumberField label={t("admin.builder.padding")} value={block.padding ?? 24} min={0} max={120} onChange={(value) => onChange({ padding: value })} />
         <label className="checkbox-field">
           <input checked={block.stackOnMobile ?? true} type="checkbox" onChange={(event) => onChange({ stackOnMobile: event.target.checked })} />
           {t("admin.builder.stackOnMobile")}
         </label>
       </InspectorGroup>
 
+      {hasButtonControl ? (
+        <InspectorGroup title={t("admin.builder.buttonStyle")}>
+          <div className="field">
+            <label htmlFor="builder-button-size">{t("admin.builder.buttonSize")}</label>
+            <select id="builder-button-size" value={block.buttonSize ?? "medium"} onChange={(event) => onChange({ buttonSize: event.target.value as BuilderBlock["buttonSize"] })}>
+              <option value="small">{t("admin.builder.small")}</option>
+              <option value="medium">{t("admin.builder.medium")}</option>
+              <option value="large">{t("admin.builder.large")}</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="builder-button-variant">{t("admin.builder.buttonVariant")}</label>
+            <select id="builder-button-variant" value={block.buttonVariant ?? "solid"} onChange={(event) => onChange({ buttonVariant: event.target.value as BuilderBlock["buttonVariant"] })}>
+              <option value="solid">{t("admin.builder.solid")}</option>
+              <option value="outline">{t("admin.builder.outline")}</option>
+              <option value="ghost">{t("admin.builder.ghost")}</option>
+            </select>
+          </div>
+        </InspectorGroup>
+      ) : null}
+
       <InspectorGroup title={t("admin.builder.blockStyle")}>
-        <Field label={t("admin.builder.background")} value={block.background ?? ""} onChange={(value) => onChange({ background: value })} placeholder={t("admin.builder.backgroundPlaceholder")} />
-        <Field label={t("admin.builder.borderColor")} value={block.borderColor ?? ""} onChange={(value) => onChange({ borderColor: value })} placeholder={t("admin.builder.borderColorPlaceholder")} />
         <NumberField label={t("admin.builder.borderRadius")} value={block.borderRadius ?? getDefaultBorderRadius(block.type)} min={0} max={80} step={1} onChange={(value) => onChange({ borderRadius: value })} />
         <div className="field">
           <label htmlFor="builder-shadow">{t("admin.builder.shadow")}</label>
@@ -966,6 +1140,12 @@ function BlockInspector({
           {t("admin.builder.hoverEffect")}
         </label>
       </InspectorGroup>
+
+      {canUseDefaultPresets ? (
+        <button className="button secondary" type="button" disabled={disabled} onClick={resetStyle}>
+          {t("admin.builder.resetStyle")}
+        </button>
+      ) : null}
 
       <button className="button danger" type="button" disabled={disabled} onClick={onDelete}>
         <Trash2 size={17} />
@@ -1018,19 +1198,358 @@ function ImageControls({
   );
 }
 
+function GalleryControls({
+  block,
+  uploading,
+  inputRef,
+  onUpload,
+  onChange
+}: {
+  block: BuilderBlock;
+  uploading: boolean;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (patch: Partial<BuilderBlock>) => void;
+}) {
+  const { t } = useLanguage();
+  const imageIds = block.galleryImageIds ?? [];
+
+  return (
+    <InspectorGroup title={t("admin.builder.gallery")}>
+      {imageIds.length ? (
+        <div className="visual-builder-gallery-list">
+          {imageIds.map((imageId) => (
+            <div className="visual-builder-gallery-item" key={imageId}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/media/${imageId}`} alt="" />
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => onChange({ galleryImageIds: imageIds.filter((id) => id !== imageId) })}
+              >
+                {t("admin.common.remove")}
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={onUpload} />
+      <p className="field-help">{uploading ? t("admin.builder.uploadingImage") : t("admin.builder.uploadGalleryImages")}</p>
+      <Field label={t("admin.builder.altText")} value={block.imageAlt ?? ""} onChange={(value) => onChange({ imageAlt: value })} />
+      <div className="field">
+        <label htmlFor="gallery-layout">{t("admin.builder.galleryLayout")}</label>
+        <select id="gallery-layout" value={block.galleryLayout ?? "grid"} onChange={(event) => onChange({ galleryLayout: event.target.value as BuilderBlock["galleryLayout"] })}>
+          <option value="grid">{t("admin.builder.grid")}</option>
+          <option value="mosaic">{t("admin.builder.mosaic")}</option>
+          <option value="strip">{t("admin.builder.strip")}</option>
+        </select>
+      </div>
+    </InspectorGroup>
+  );
+}
+
+function BlockPresetControls({ block, onApply }: { block: BuilderBlock; onApply: (preset: BlockPreset) => void }) {
+  const { t } = useLanguage();
+  const presets = getBlockPresets(block.type, t);
+  if (!presets.length) return null;
+
+  return (
+    <InspectorGroup title={t("admin.builder.presets")}>
+      <div className="visual-builder-preset-list">
+        {presets.map((preset) => (
+          <button className="button secondary" type="button" key={preset.label} onClick={() => onApply(preset)}>
+            {preset.label}
+          </button>
+        ))}
+      </div>
+      <p className="field-help">{t("admin.builder.presetsHelp")}</p>
+    </InspectorGroup>
+  );
+}
+
+function getBlockPresets(type: BuilderBlockType, t: AdminTranslator): BlockPreset[] {
+  if (type === "text") {
+    return [
+      {
+        label: t("admin.builder.presetPlainText"),
+        patch: {
+          background: "transparent",
+          borderColor: "transparent",
+          shadow: "none",
+          padding: 24,
+          titleBodyGap: 16,
+          textStyle: {
+            title: { fontSize: 40, fontWeight: 750, lineHeight: 1.12, align: "left" },
+            body: { fontSize: 18, fontWeight: 400, lineHeight: 1.6, align: "left" }
+          }
+        }
+      },
+      {
+        label: t("admin.builder.presetCenteredIntro"),
+        patch: {
+          align: "center",
+          background: "transparent",
+          borderColor: "transparent",
+          shadow: "none",
+          padding: 32,
+          titleBodyGap: 18,
+          textStyle: {
+            title: { fontSize: 48, fontWeight: 800, lineHeight: 1.08, align: "center", wrap: true },
+            body: { fontSize: 20, fontWeight: 400, lineHeight: 1.65, align: "center" }
+          }
+        }
+      },
+      {
+        label: t("admin.builder.presetCardText"),
+        patch: {
+          background: "#ffffff",
+          borderColor: "#e5e7eb",
+          borderRadius: 12,
+          shadow: "soft",
+          padding: 28,
+          titleBodyGap: 14
+        }
+      },
+      {
+        label: t("admin.builder.presetQuoteStyle"),
+        patch: {
+          background: "#f8fafc",
+          borderColor: "#cbd5e1",
+          borderRadius: 12,
+          shadow: "none",
+          padding: 30,
+          titleBodyGap: 12,
+          textStyle: {
+            title: { fontSize: 28, fontWeight: 700, lineHeight: 1.2, align: "left" },
+            body: { fontSize: 22, fontWeight: 400, lineHeight: 1.7, align: "left" }
+          }
+        }
+      }
+    ];
+  }
+
+  if (type === "hero" || type === "banner" || type === "contactCta") {
+    return [
+      {
+        label: type === "hero" ? t("admin.builder.presetCenteredHero") : t("admin.builder.presetSimpleCtaBanner"),
+        patch: {
+          align: "center",
+          verticalAlign: "middle",
+          padding: type === "hero" ? 48 : 32,
+          titleBodyGap: 16,
+          bodyButtonGap: 24,
+          buttonSize: type === "hero" ? "large" : "medium",
+          buttonVariant: "solid",
+          textStyle: {
+            title: { fontSize: type === "hero" ? 56 : 38, fontWeight: 850, lineHeight: 1.02, align: "center", wrap: true },
+            body: { fontSize: type === "hero" ? 20 : 18, fontWeight: 400, lineHeight: 1.6, align: "center" }
+          }
+        }
+      },
+      {
+        label: t("admin.builder.presetLeftAlignedHero"),
+        patch: {
+          align: "left",
+          verticalAlign: "middle",
+          padding: 48,
+          titleBodyGap: 16,
+          bodyButtonGap: 24,
+          textStyle: {
+            title: { fontSize: type === "hero" ? 54 : 36, fontWeight: 850, lineHeight: 1.04, align: "left", wrap: true },
+            body: { fontSize: 18, fontWeight: 400, lineHeight: 1.6, align: "left" }
+          }
+        }
+      },
+      {
+        label: t("admin.builder.presetDarkOverlayBanner"),
+        patch: {
+          background: "#111827",
+          color: "#ffffff",
+          borderColor: "transparent",
+          shadow: "medium",
+          overlayOpacity: 0.35,
+          buttonVariant: "outline",
+          buttonHoverBackground: "#ffffff",
+          buttonHoverColor: "#111827"
+        }
+      }
+    ];
+  }
+
+  if (type === "image") {
+    return [
+      { label: t("admin.builder.presetFullImage"), patch: { padding: 0, borderRadius: 0, shadow: "none", imageFit: "cover" } },
+      { label: t("admin.builder.presetRoundedImage"), patch: { padding: 0, borderRadius: 16, shadow: "none", imageFit: "cover" } },
+      { label: t("admin.builder.presetImageWithCaption"), patch: { padding: 0, borderRadius: 12, shadow: "soft", titleBodyGap: 8 } },
+      { label: t("admin.builder.presetSoftShadowImage"), patch: { padding: 0, borderRadius: 12, shadow: "medium", hoverEffect: true } }
+    ];
+  }
+
+  if (type === "button") {
+    return [
+      { label: t("admin.builder.solid"), patch: { buttonVariant: "solid", buttonSize: "medium", borderRadius: 999, shadow: "medium" } },
+      { label: t("admin.builder.outline"), patch: { buttonVariant: "outline", buttonSize: "medium", borderRadius: 999, shadow: "none" } },
+      { label: t("admin.builder.ghost"), patch: { buttonVariant: "ghost", buttonSize: "medium", borderRadius: 999, shadow: "none" } }
+    ];
+  }
+
+  if (type === "static") {
+    return [
+      { label: t("admin.builder.presetPlainText"), patch: { background: "transparent", borderColor: "transparent", shadow: "none", padding: 24, titleBodyGap: 14 } },
+      { label: t("admin.builder.presetCardText"), patch: { background: "#ffffff", borderColor: "#e5e7eb", borderRadius: 12, shadow: "soft", padding: 28, titleBodyGap: 14 } }
+    ];
+  }
+
+  return [];
+}
+
+function BlockColorControls({
+  block,
+  onChange,
+  onTextStyleChange
+}: {
+  block: BuilderBlock;
+  onChange: (patch: Partial<BuilderBlock>) => void;
+  onTextStyleChange: (target: "title" | "body", patch: Partial<BuilderTextElementStyle>) => void;
+}) {
+  const { t } = useLanguage();
+  const supportsBackground = block.type !== "button";
+  const supportsBorder = block.type !== "button" && block.type !== "spacer";
+  const supportsOverlay = ["hero", "banner", "image", "video", "gallery"].includes(block.type);
+  const supportsTitleColor = ["hero", "text", "image", "video", "gallery", "banner", "static", "cards", "twoColumn"].includes(block.type);
+  const supportsBodyColor = ["hero", "text", "banner", "static", "cards", "twoColumn"].includes(block.type);
+  const supportsButtonColor = block.type === "hero" || block.type === "button";
+  const titleColor = block.textStyle?.title?.color ?? "";
+  const bodyColor = block.textStyle?.body?.color ?? "";
+  const buttonBackground = block.buttonBackgroundColor ?? (block.type === "button" ? block.background ?? "" : "");
+  const buttonText = block.buttonTextColor ?? (block.type === "button" ? block.color ?? "" : "");
+
+  return (
+    <InspectorGroup title={t("admin.builder.colors")}>
+      {supportsBackground ? (
+        <ColorField
+          label={t(block.type === "spacer" ? "admin.builder.spacerBackgroundColor" : "admin.builder.blockBackgroundColor")}
+          value={block.background ?? ""}
+          onChange={(value) => onChange({ background: value })}
+          placeholder={t("admin.builder.backgroundPlaceholder")}
+        />
+      ) : null}
+
+      {supportsBorder ? (
+        <ColorField
+          label={t(block.type === "divider" ? "admin.builder.dividerColor" : "admin.builder.borderColor")}
+          value={block.borderColor ?? ""}
+          onChange={(value) => onChange({ borderColor: value })}
+          placeholder={t("admin.builder.borderColorPlaceholder")}
+        />
+      ) : null}
+
+      {supportsOverlay ? (
+        <>
+          <ColorField
+            label={t("admin.builder.overlayColor")}
+            value={block.overlayColor ?? ""}
+            onChange={(value) => onChange({ overlayColor: value })}
+            placeholder="#000000"
+          />
+          <NumberField label={t("admin.builder.overlayOpacity")} value={block.overlayOpacity ?? 0} min={0} max={0.95} step={0.05} suffix="" onChange={(value) => onChange({ overlayOpacity: value })} />
+        </>
+      ) : null}
+
+      {supportsTitleColor ? (
+        <ColorField
+          label={t("admin.builder.titleColor")}
+          value={titleColor}
+          onChange={(value) => onTextStyleChange("title", { color: value })}
+          placeholder={t("admin.builder.colorPlaceholder")}
+          warning={getContrastWarning(titleColor, block.background ?? "", t)}
+        />
+      ) : null}
+
+      {supportsBodyColor ? (
+        <ColorField
+          label={t("admin.builder.bodyTextColor")}
+          value={bodyColor}
+          onChange={(value) => onTextStyleChange("body", { color: value })}
+          placeholder={t("admin.builder.colorPlaceholder")}
+          warning={getContrastWarning(bodyColor, block.background ?? "", t)}
+        />
+      ) : null}
+
+      {supportsButtonColor ? (
+        <>
+          <ColorField
+            label={t("admin.builder.buttonBackgroundColor")}
+            value={buttonBackground}
+            onChange={(value) => onChange({ buttonBackgroundColor: value })}
+            placeholder="#2563eb"
+          />
+          <ColorField
+            label={t("admin.builder.buttonTextColor")}
+            value={buttonText}
+            onChange={(value) => onChange({ buttonTextColor: value })}
+            placeholder="#ffffff"
+            warning={getContrastWarning(buttonText, buttonBackground, t)}
+          />
+          <ColorField
+            label={t("admin.builder.buttonBorderColor")}
+            value={block.buttonBorderColor ?? ""}
+            onChange={(value) => onChange({ buttonBorderColor: value })}
+            placeholder="transparent"
+          />
+          <ColorField
+            label={t("admin.builder.hoverBackground")}
+            value={block.buttonHoverBackground ?? ""}
+            onChange={(value) => onChange({ buttonHoverBackground: value })}
+            placeholder="#1d4ed8"
+          />
+          <ColorField
+            label={t("admin.builder.hoverTextColor")}
+            value={block.buttonHoverColor ?? ""}
+            onChange={(value) => onChange({ buttonHoverColor: value })}
+            placeholder="#ffffff"
+          />
+          <ColorField
+            label={t("admin.builder.hoverBorderColor")}
+            value={block.buttonHoverBorderColor ?? ""}
+            onChange={(value) => onChange({ buttonHoverBorderColor: value })}
+            placeholder="transparent"
+          />
+          <ColorField
+            label={t("admin.builder.disabledBackgroundColor")}
+            value={block.buttonDisabledBackground ?? ""}
+            onChange={(value) => onChange({ buttonDisabledBackground: value })}
+            placeholder="#dbeafe"
+          />
+          <ColorField
+            label={t("admin.builder.disabledTextColor")}
+            value={block.buttonDisabledColor ?? ""}
+            onChange={(value) => onChange({ buttonDisabledColor: value })}
+            placeholder="#64748b"
+          />
+        </>
+      ) : null}
+    </InspectorGroup>
+  );
+}
+
 function TextStyleControls({
   title,
-  idPrefix,
   style,
   fallback,
+  fontSizeLabel,
+  minFontSize,
+  maxFontSize,
   showWrap = false,
   onChange
 }: {
   title: string;
-  idPrefix: string;
   style?: BuilderTextElementStyle;
   fallback: Required<Pick<BuilderTextElementStyle, "fontFamily" | "fontSize" | "fontWeight" | "color" | "lineHeight" | "letterSpacing" | "align">> &
     Pick<BuilderTextElementStyle, "wrap">;
+  fontSizeLabel: string;
+  minFontSize: number;
+  maxFontSize: number;
   showWrap?: boolean;
   onChange: (patch: Partial<BuilderTextElementStyle>) => void;
 }) {
@@ -1039,26 +1558,19 @@ function TextStyleControls({
     ...fallback,
     ...(style ?? {})
   };
+  const generatedId = useId();
+  const alignId = `text-align-${generatedId.replace(/:/g, "")}`;
 
   return (
     <InspectorGroup title={title}>
       <Field label={t("admin.builder.fontFamily")} value={current.fontFamily ?? ""} onChange={(value) => onChange({ fontFamily: value })} placeholder={t("admin.builder.fontFamilyPlaceholder")} />
-      <div className="field">
-        <label htmlFor={`${idPrefix}-font-size`}>{t("admin.builder.fontSize")}</label>
-        <select id={`${idPrefix}-font-size`} value={current.fontSize ?? fallback.fontSize} onChange={(event) => onChange({ fontSize: Number(event.target.value) })}>
-          {fontSizes.map((size) => (
-            <option value={size} key={size}>{size}px</option>
-          ))}
-        </select>
-      </div>
-      <NumberField label={t("admin.builder.customFontSize")} value={current.fontSize ?? fallback.fontSize} min={8} max={120} onChange={(value) => onChange({ fontSize: value })} />
+      <NumberField label={fontSizeLabel} value={current.fontSize ?? fallback.fontSize} min={minFontSize} max={maxFontSize} onChange={(value) => onChange({ fontSize: value })} />
       <NumberField label={t("admin.builder.fontWeight")} value={current.fontWeight ?? fallback.fontWeight} min={100} max={1000} step={100} suffix="" onChange={(value) => onChange({ fontWeight: value })} />
-      <Field label={t("admin.builder.color")} value={current.color ?? ""} onChange={(value) => onChange({ color: value })} placeholder={t("admin.builder.colorPlaceholder")} />
       <NumberField label={t("admin.builder.lineHeight")} value={current.lineHeight ?? fallback.lineHeight} min={0.8} max={3} step={0.05} suffix="" onChange={(value) => onChange({ lineHeight: value })} />
       <NumberField label={t("admin.builder.letterSpacing")} value={current.letterSpacing ?? fallback.letterSpacing} min={-2} max={20} step={0.5} onChange={(value) => onChange({ letterSpacing: value })} />
       <div className="field">
-        <label htmlFor={`${idPrefix}-align`}>{t("admin.builder.alignment")}</label>
-        <select id={`${idPrefix}-align`} value={current.align ?? fallback.align} onChange={(event) => onChange({ align: event.target.value as BuilderAlign })}>
+        <label htmlFor={alignId}>{t("admin.builder.alignment")}</label>
+        <select id={alignId} value={current.align ?? fallback.align} onChange={(event) => onChange({ align: event.target.value as BuilderAlign })}>
           <option value="left">{t("admin.builder.left")}</option>
           <option value="center">{t("admin.builder.center")}</option>
           <option value="right">{t("admin.builder.right")}</option>
@@ -1106,6 +1618,54 @@ function Field({
       ) : (
         <input id={id} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
       )}
+    </div>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+  placeholder = "#ffffff",
+  allowTransparent = true,
+  warning
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  allowTransparent?: boolean;
+  warning?: string;
+}) {
+  const { t } = useLanguage();
+  const generatedId = useId();
+  const id = `color-field-${generatedId.replace(/:/g, "")}`;
+  const swatchValue = getColorSwatchValue(value || placeholder);
+
+  return (
+    <div className="field color-field">
+      <label htmlFor={id}>{label}</label>
+      <div className="color-field__row">
+        <input
+          aria-label={t("admin.builder.colorPickerLabel", { label })}
+          className="color-field__swatch"
+          type="color"
+          value={swatchValue}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <input id={id} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+      </div>
+      <div className="color-field__actions">
+        <button className="button secondary" type="button" onClick={() => onChange("")}>
+          {t("admin.builder.resetColor")}
+        </button>
+        {allowTransparent ? (
+          <button className="button secondary" type="button" onClick={() => onChange("transparent")}>
+            {t("admin.builder.transparent")}
+          </button>
+        ) : null}
+      </div>
+      {warning ? <p className="field-help color-field__warning">{warning}</p> : null}
     </div>
   );
 }
@@ -1265,6 +1825,21 @@ function resizeRect(
   return { x, y, width, height };
 }
 
+function resizeBlockByKeyboard(rect: CanvasRect, direction: "up" | "right" | "down" | "left", xStep: number, yStep: number): Partial<BuilderBlock> {
+  if (direction === "right") return { canvasWidth: snapPercent(clamp(rect.width + xStep, minBlockWidthPercent, 100 - rect.x)) };
+  if (direction === "left") return { canvasWidth: snapPercent(clamp(rect.width - xStep, minBlockWidthPercent, 100 - rect.x)) };
+  if (direction === "down") return { canvasHeight: snap(clamp(rect.height + yStep, minBlockHeight, 2000)) };
+  return { canvasHeight: snap(clamp(rect.height - yStep, minBlockHeight, 2000)) };
+}
+
+function keyToDirection(key: string): "up" | "right" | "down" | "left" | null {
+  if (key === "ArrowUp") return "up";
+  if (key === "ArrowRight") return "right";
+  if (key === "ArrowDown") return "down";
+  if (key === "ArrowLeft") return "left";
+  return null;
+}
+
 function makeDefaultRect(index: number): CanvasRect {
   return {
     x: 8 + (index % 3) * 4,
@@ -1286,11 +1861,56 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function getColorSwatchValue(value: string) {
+  const normalized = normalizeHexColor(value);
+  return normalized ?? "#000000";
+}
+
+function getContrastWarning(foreground: string, background: string, t: AdminTranslator) {
+  const ratio = getContrastRatio(foreground, background);
+  return ratio !== null && ratio < 4.5 ? t("admin.builder.lowContrastWarning", { ratio: ratio.toFixed(1) }) : undefined;
+}
+
+function getContrastRatio(foreground: string, background: string) {
+  const foregroundRgb = parseHexColor(foreground);
+  const backgroundRgb = parseHexColor(background);
+  if (!foregroundRgb || !backgroundRgb) return null;
+  const lighter = Math.max(getRelativeLuminance(foregroundRgb), getRelativeLuminance(backgroundRgb));
+  const darker = Math.min(getRelativeLuminance(foregroundRgb), getRelativeLuminance(backgroundRgb));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function normalizeHexColor(value: string) {
+  const trimmed = value.trim();
+  if (/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(trimmed)) return trimmed.slice(0, 7);
+  const short = /^#([0-9A-Fa-f]{3})$/.exec(trimmed);
+  if (!short) return null;
+  return `#${short[1].split("").map((char) => `${char}${char}`).join("")}`;
+}
+
+function parseHexColor(value: string) {
+  const normalized = normalizeHexColor(value);
+  if (!normalized) return null;
+  return {
+    r: Number.parseInt(normalized.slice(1, 3), 16) / 255,
+    g: Number.parseInt(normalized.slice(3, 5), 16) / 255,
+    b: Number.parseInt(normalized.slice(5, 7), 16) / 255
+  };
+}
+
+function getRelativeLuminance(color: { r: number; g: number; b: number }) {
+  const [r, g, b] = [color.r, color.g, color.b].map((channel) => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
 function getBlockTypeLabel(type: BuilderBlockType, t: AdminTranslator) {
   return t(`admin.builder.blockTypes.${type}`);
 }
 
-function PaletteIcon({ icon }: { icon: "text" | "image" | "pointer" | "form" | "help" }) {
+function PaletteIcon({ icon }: { icon: PaletteIconType }) {
+  if (icon === "gallery") return <Images size={16} />;
+  if (icon === "video") return <MonitorPlay size={16} />;
+  if (icon === "static") return <Blocks size={16} />;
   if (icon === "image") return <ImageIcon size={16} />;
   if (icon === "pointer") return <MousePointer2 size={16} />;
   if (icon === "form") return <ClipboardList size={16} />;
@@ -1300,6 +1920,71 @@ function PaletteIcon({ icon }: { icon: "text" | "image" | "pointer" | "form" | "
 
 function createBlockId() {
   return globalThis.crypto?.randomUUID?.() ?? `block-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function isTypeAllowed(type: BuilderBlockType, allowedBlockTypes?: readonly BuilderBlockType[]) {
+  return !allowedBlockTypes || allowedBlockTypes.includes(type);
+}
+
+function isDefaultStyleBlock(type: BuilderBlockType) {
+  return ["hero", "text", "image", "button", "video", "gallery", "banner", "static", "spacer", "divider"].includes(type);
+}
+
+function isDefaultColorBlock(type: BuilderBlockType) {
+  return ["hero", "text", "image", "button", "video", "gallery", "banner", "static", "cards", "twoColumn", "spacer", "divider"].includes(type);
+}
+
+function getStyleResetPatch(block: BuilderBlock): Partial<BuilderBlock> {
+  const defaults = createBuilderBlock(block.type);
+  return {
+    width: defaults.width,
+    align: defaults.align,
+    verticalAlign: defaults.verticalAlign,
+    contentDirection: defaults.contentDirection,
+    background: defaults.background,
+    color: defaults.color,
+    borderColor: defaults.borderColor,
+    overlayColor: defaults.overlayColor,
+    borderRadius: defaults.borderRadius,
+    shadow: defaults.shadow,
+    opacity: defaults.opacity,
+    hoverEffect: defaults.hoverEffect,
+    fontSize: defaults.fontSize,
+    fontFamily: defaults.fontFamily,
+    bold: defaults.bold,
+    italic: defaults.italic,
+    underline: defaults.underline,
+    lineHeight: defaults.lineHeight,
+    letterSpacing: defaults.letterSpacing,
+    paragraphSpacing: defaults.paragraphSpacing,
+    titleBodyGap: defaults.titleBodyGap,
+    bodyButtonGap: defaults.bodyButtonGap,
+    overlayOpacity: defaults.overlayOpacity,
+    gap: defaults.gap,
+    padding: defaults.padding,
+    paddingY: defaults.paddingY,
+    blockWidth: defaults.blockWidth,
+    minHeight: defaults.minHeight,
+    height: defaults.height,
+    imageFit: defaults.imageFit,
+    imageZoom: defaults.imageZoom,
+    imageOffsetX: defaults.imageOffsetX,
+    imageOffsetY: defaults.imageOffsetY,
+    focalX: defaults.focalX,
+    focalY: defaults.focalY,
+    stackOnMobile: defaults.stackOnMobile,
+    textStyle: defaults.textStyle,
+    buttonSize: defaults.buttonSize,
+    buttonVariant: defaults.buttonVariant,
+    buttonBackgroundColor: defaults.buttonBackgroundColor,
+    buttonTextColor: defaults.buttonTextColor,
+    buttonBorderColor: defaults.buttonBorderColor,
+    buttonHoverBackground: defaults.buttonHoverBackground,
+    buttonHoverColor: defaults.buttonHoverColor,
+    buttonHoverBorderColor: defaults.buttonHoverBorderColor,
+    buttonDisabledBackground: defaults.buttonDisabledBackground,
+    buttonDisabledColor: defaults.buttonDisabledColor
+  };
 }
 
 function isDynamicContentType(type: BuilderBlockType) {
@@ -1325,16 +2010,16 @@ function getDefaultDynamicRoute(type: BuilderBlockType) {
 function getDefaultBorderRadius(type: BuilderBlockType) {
   if (type === "divider" || type === "spacer") return 0;
   if (type === "button") return 999;
-  if (type === "image") return 10;
+  if (type === "image" || type === "video" || type === "gallery") return 10;
   return 8;
 }
 
 function getDefaultShadow(type: BuilderBlockType): BuilderShadow {
-  if (type === "hero" || type === "banner" || type === "contactCta") return "soft";
-  if (type === "image" || type === "button") return "medium";
+  if (type === "hero" || type === "banner" || type === "contactCta" || type === "static") return "soft";
+  if (type === "image" || type === "video" || type === "gallery" || type === "button") return "medium";
   return "none";
 }
 
 function hasDefaultHoverEffect(type: BuilderBlockType) {
-  return type === "button" || type === "image" || type === "cards";
+  return type === "button" || type === "image" || type === "gallery" || type === "cards";
 }

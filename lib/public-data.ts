@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { PublishStatus } from "@prisma/client";
+import { PostStatus, PublishStatus } from "@prisma/client";
 import { defaultHomeSections, defaultSite } from "@/config/default-site";
 import { defaultTheme, radiusMap } from "@/config/default-theme";
 import { prisma } from "@/lib/db";
@@ -46,7 +46,12 @@ export async function getPublicSiteContext() {
       "posts",
       () =>
         prisma.post.findMany({
-          where: { status: PublishStatus.PUBLISHED },
+          where: {
+            OR: [
+              { status: PostStatus.PUBLISHED },
+              { status: PostStatus.SCHEDULED, scheduledAt: { lte: new Date() } }
+            ]
+          },
           orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
           take: 12
         }),
@@ -158,19 +163,20 @@ export async function getThemeStyle(): Promise<CSSProperties> {
   const radius = radiusMap[theme.borderRadius] ?? radiusMap.medium;
 
   return {
-    "--color-primary": theme.primaryColor,
-    "--color-secondary": theme.secondaryColor,
-    "--color-accent": theme.accentColor,
-    "--color-background": theme.backgroundColor,
-    "--color-text": theme.textColor,
+    "--color-primary": theme.primaryColor || defaultTheme.primaryColor,
+    "--color-secondary": theme.secondaryColor || defaultTheme.secondaryColor,
+    "--color-accent": theme.accentColor || defaultTheme.accentColor,
+    "--color-background": theme.backgroundColor || defaultTheme.backgroundColor,
+    "--color-text": theme.textColor || defaultTheme.textColor,
     "--font-family": `${theme.fontFamily}, Arial, sans-serif`,
     "--radius-card": radius,
     "--radius-button": radius,
     "--theme-background-image": theme.backgroundImageId ? `url("/api/media/${theme.backgroundImageId}")` : "none",
     "--theme-background-overlay": theme.backgroundImageId ? "rgb(255 255 255 / 0.18)" : "transparent",
+    backgroundColor: theme.backgroundColor || defaultTheme.backgroundColor,
+    color: theme.textColor || defaultTheme.textColor,
     ...(theme.backgroundImageId
       ? {
-          backgroundColor: theme.backgroundColor,
           backgroundImage: `linear-gradient(rgb(255 255 255 / 0.18), rgb(255 255 255 / 0.18)), url("/api/media/${theme.backgroundImageId}")`,
           backgroundAttachment: "fixed",
           backgroundPosition: "center",

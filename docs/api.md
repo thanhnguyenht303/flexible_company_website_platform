@@ -30,16 +30,19 @@ File streaming endpoints such as `/api/media/[id]` and `/api/admin/files/[id]` r
 
 ## Authentication and Permissions
 
-Admin endpoints require a valid admin session cookie created by `/api/admin/login`. Super Admin users have `{ "all": true }` permissions. Other admin users must have the permission named in the endpoint table.
+Admin endpoints require a valid admin session cookie created by `/api/admin/login`. Super Admin users bypass individual authority checks. Other admin users must have the authority named in the endpoint table.
 
 Unsafe admin methods (`POST`, `PUT`, `PATCH`, and `DELETE`) also pass through a same-origin CSRF check in `middleware.ts`. Browser requests from the app include the needed headers automatically. Scripted clients must send an `Origin` or `Referer` whose host matches the request host.
 
-Available permission names:
+Available authority names:
 
 ```text
-site.settings.update
-theme.update
+dashboard.view
+siteSettings.manage
+theme.manage
+pages.manage
 users.manage
+roles.manage
 products.manage
 services.manage
 posts.manage
@@ -51,8 +54,10 @@ inquiries.manage
 forms.manage
 leads.manage
 qa.manage
-audit.view
+email.manage
 ```
+
+Legacy aliases still map `site.settings.update` to `siteSettings.manage` and `theme.update` to `theme.manage`, but new code and docs should use the current authority keys.
 
 ## Public Endpoints
 
@@ -121,11 +126,12 @@ Login body:
 
 | Method | Path | Access | Body | Purpose |
 | --- | --- | --- | --- | --- |
-| `PUT` | `/api/admin/settings/site` | `site.settings.update` | JSON or `multipart/form-data` | Updates site identity, contact fields, map URL, domain, and optional site logo. |
-| `PUT` | `/api/admin/settings/theme` | `theme.update` | JSON or `multipart/form-data` | Updates theme colors, typography, radius/layout settings, custom CSS, optional background image, and background removal. |
-| `PATCH` | `/api/admin/pages/[slug]` | `site.settings.update` | JSON | Updates public page visibility for configured public pages. |
-| `PUT` | `/api/admin/page-builder/[slug]` | `site.settings.update` | JSON | Saves a visual page-builder draft or publishes builder blocks to `PageSection`. |
-| `POST` | `/api/admin/page-builder/[slug]/images` | `site.settings.update` | `multipart/form-data` | Uploads a page-builder image and returns its media id and URL. |
+| `PUT` | `/api/admin/settings/site` | `siteSettings.manage` | JSON or `multipart/form-data` | Updates site identity, contact fields, map URL, domain, and optional site logo. |
+| `PUT` | `/api/admin/settings/theme` | `theme.manage` | JSON or `multipart/form-data` | Updates theme colors, typography, radius/layout settings, custom CSS, optional background image, and background removal. |
+| `PUT` | `/api/admin/settings/navbar-theme` | `theme.manage` | JSON | Updates navbar-specific theme settings. |
+| `PATCH` | `/api/admin/pages/[slug]` | `pages.manage` | JSON | Updates public page visibility for configured public pages. |
+| `PUT` | `/api/admin/page-builder/[slug]` | `pages.manage` | JSON | Saves a visual page-builder draft or publishes builder blocks to `PageSection`. |
+| `POST` | `/api/admin/page-builder/[slug]/images` | `pages.manage` | `multipart/form-data` | Uploads a page-builder image and returns its media id and URL. |
 
 Page visibility body:
 
@@ -166,6 +172,9 @@ Page builder body:
 | `GET` | `/api/admin/posts/[id]` | `posts.manage` | None | Returns one post. |
 | `PATCH` | `/api/admin/posts/[id]` | `posts.manage` | JSON or `multipart/form-data` | Updates a post, slug, status, localized fields, featured image, and inline images. |
 | `DELETE` | `/api/admin/posts/[id]` | `posts.manage` | None | Deletes a post plus post media metadata and image folder. |
+| `POST` | `/api/admin/posts/[id]/images` | `posts.manage` | `multipart/form-data` | Uploads inline post images and returns media ids/URLs for article content. |
+| `GET` | `/api/admin/posts/[id]/revisions` | `posts.manage` | None | Lists post revisions. |
+| `GET` | `/api/admin/posts/[id]/revisions/[revisionId]` | `posts.manage` | None | Reads one post revision. |
 | `GET` | `/api/admin/team` | `team.manage` | None | Lists team members ordered by sort order and creation date. |
 | `POST` | `/api/admin/team` | `team.manage` | JSON or `multipart/form-data` | Creates a team member and optional photo. |
 | `GET` | `/api/admin/team/[id]` | `team.manage` | None | Returns one team member. |
@@ -176,11 +185,13 @@ Page builder body:
 | `GET` | `/api/admin/careers/[id]` | `careers.manage` | None | Returns one job posting. |
 | `PATCH` | `/api/admin/careers/[id]` | `careers.manage` | JSON | Updates a job posting, slug, status, and publication timestamp. |
 | `DELETE` | `/api/admin/careers/[id]` | `careers.manage` | None | Deletes a job posting, related applications, resume files, and file metadata. |
+| `PUT` | `/api/admin/careers/theme` | `careers.manage` | `multipart/form-data` | Updates career page theme colors and optional background image. |
 | `GET` | `/api/admin/footer` | `footer.manage` | None | Lists footer collaborators ordered by sort order and creation date. |
 | `POST` | `/api/admin/footer` | `footer.manage` | `multipart/form-data` | Creates a footer collaborator with required logo upload. |
 | `GET` | `/api/admin/footer/[id]` | `footer.manage` | None | Returns one footer collaborator. |
 | `PATCH` | `/api/admin/footer/[id]` | `footer.manage` | JSON or `multipart/form-data` | Updates a footer collaborator and optionally replaces its logo. |
 | `DELETE` | `/api/admin/footer/[id]` | `footer.manage` | None | Deletes a footer collaborator plus logo media metadata and logo folder. |
+| `PUT` | `/api/admin/footer/theme` | `footer.manage` | JSON or `multipart/form-data` | Updates footer theme/content settings. |
 
 ## Admin Forms, Leads, and Q&A Endpoints
 
@@ -192,6 +203,8 @@ Page builder body:
 | `PATCH` | `/api/admin/forms/[id]` | `forms.manage` | JSON | Updates form metadata and replaces the ordered field list when fields are provided. |
 | `DELETE` | `/api/admin/forms/[id]` | `forms.manage` | None | Deletes the form and its submissions/fields. |
 | `GET` | `/api/admin/forms/[id]/submissions` | `forms.manage` | None or `?format=csv` | Lists recent submissions or exports CSV. |
+| `GET` | `/api/admin/forms/[id]/submissions/[submissionId]` | `forms.manage` | None | Reads one submission. |
+| `PATCH` | `/api/admin/forms/[id]/submissions/[submissionId]` | `forms.manage` | JSON | Updates submission workflow fields. |
 | `GET` | `/api/admin/leads` | `leads.manage` | None or `?format=csv` | Lists leads with optional `q`, `status`, and `formId` filters, or exports CSV. |
 | `GET` | `/api/admin/leads/[id]` | `leads.manage` | None | Returns a lead plus related submission/form/Q&A context. |
 | `PATCH` | `/api/admin/leads/[id]` | `leads.manage` | JSON | Updates status, priority, internal note, assignee, and follow-up date. |
@@ -200,6 +213,51 @@ Page builder body:
 | `GET` | `/api/admin/qa/[id]` | `qa.manage` | None | Returns one Q&A item plus related lead/submission/form context. |
 | `PATCH` | `/api/admin/qa/[id]` | `qa.manage` | JSON | Updates a Q&A item and manages `publishedAt` when status changes to/from `PUBLISHED`. |
 | `DELETE` | `/api/admin/qa/[id]` | `qa.manage` | None | Deletes a Q&A item. |
+| `PUT` | `/api/admin/qa/theme` | `qa.manage` | `multipart/form-data` | Updates Q&A public page theme colors and optional background image. |
+
+## Admin Email Center Endpoints
+
+All Email Center endpoints require `email.manage`.
+
+| Method | Path | Body | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/admin/email/settings` | None | Reads Email Center SMTP/IMAP settings. |
+| `PATCH` | `/api/admin/email/settings` | JSON | Updates Email Center settings; sensitive connection fields are stored encrypted. |
+| `POST` | `/api/admin/email/settings/test-smtp` | JSON | Tests SMTP connection settings. |
+| `POST` | `/api/admin/email/settings/test-imap` | JSON | Tests IMAP connection settings. |
+| `POST` | `/api/admin/email/settings/test-email` | JSON | Sends a test email. |
+| `GET` | `/api/admin/email/templates` | None | Lists templates. |
+| `POST` | `/api/admin/email/templates` | JSON | Creates a template. |
+| `GET` | `/api/admin/email/templates/[id]` | None | Reads one template. |
+| `PATCH` | `/api/admin/email/templates/[id]` | JSON | Updates a template, including custom variables. |
+| `DELETE` | `/api/admin/email/templates/[id]` | None | Deletes a template. |
+| `GET` | `/api/admin/email/inbox` | None | Lists inbound messages. |
+| `POST` | `/api/admin/email/inbox/sync` | None | Syncs inbound messages from IMAP. |
+| `GET` | `/api/admin/email/messages/[id]` | None | Reads one message. |
+| `PATCH` | `/api/admin/email/messages/[id]` | JSON | Updates message metadata such as read/status fields. |
+| `POST` | `/api/admin/email/messages/[id]/reply` | JSON | Sends and records a reply. |
+| `POST` | `/api/admin/email/send` | JSON | Sends a workflow or manual email. |
+| `GET` | `/api/admin/email/sent` | None | Lists sent messages. |
+| `GET` | `/api/admin/email/logs` | None | Lists message logs and failures. |
+
+Inbound provider webhooks can post to:
+
+```text
+POST /api/email/inbound
+```
+
+## Admin User and Role Endpoints
+
+| Method | Path | Access | Body | Purpose |
+| --- | --- | --- | --- | --- |
+| `GET` | `/api/admin/users` | `users.manage` | None | Lists admin users and roles. |
+| `POST` | `/api/admin/users` | `users.manage` | JSON | Creates an admin user with an assignable role. |
+| `PATCH` | `/api/admin/users/[id]` | `users.manage` | JSON | Updates user profile, status, password, or role when delegation rules allow it. |
+| `DELETE` | `/api/admin/users/[id]` | `users.manage` | None | Deletes an admin user when allowed. |
+| `GET` | `/api/admin/roles` | `roles.manage` | None | Lists roles and authority assignments. |
+| `POST` | `/api/admin/roles` | `roles.manage` | JSON | Creates a role with delegateable authorities. |
+| `PATCH` | `/api/admin/roles/[id]` | `roles.manage` | JSON | Updates a role and its authority assignments when delegation rules allow it. |
+| `DELETE` | `/api/admin/roles/[id]` | `roles.manage` | None | Deletes a role when allowed. |
 
 ## Admin Inquiry and File Endpoints
 

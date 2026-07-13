@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/public/PublicShell";
 import { localizeTeamMember } from "@/lib/i18n/content";
@@ -5,6 +6,7 @@ import { getCurrentLanguage } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/translations";
 import { isPublicPageVisible } from "@/lib/page-visibility";
 import { getPublicSiteContext } from "@/lib/public-data";
+import { slugify } from "@/lib/slug";
 
 export default async function TeamPage() {
   if (!(await isPublicPageVisible("team"))) notFound();
@@ -24,11 +26,11 @@ export default async function TeamPage() {
           </div>
           <div className="grid">
             {localizedTeam.map((member) => (
-              <article className="card" key={member.name}>
+              <Link className="card" href={`/team/${slugify(member.name)}`} key={member.name}>
                 {"photoId" in member && member.photoId ? (
                   <div className="employee-card-photo">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/api/media/${member.photoId}`} alt="" />
+                    <img src={`/api/media/${member.photoId}`} alt={member.name} />
                   </div>
                 ) : null}
                 <h3>{member.name}</h3>
@@ -36,7 +38,7 @@ export default async function TeamPage() {
                   <strong>{member.position}</strong>
                 </p>
                 <p>{member.bio}</p>
-              </article>
+              </Link>
             ))}
             {localizedTeam.length === 0 ? (
               <p className="message">No team members are visible yet.</p>

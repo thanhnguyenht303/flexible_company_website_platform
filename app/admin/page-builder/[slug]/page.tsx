@@ -2,13 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { VisualPageBuilder } from "@/components/admin/VisualPageBuilder";
+import { requireAdminAuthority } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { getPublicSiteContext } from "@/lib/public-data";
+import { filterBuilderBlocksForPage, getAllowedBuilderBlockTypes, isSupportedBuilderPageSlug } from "@/modules/page-builder/page-builder.policy";
 import type { BuilderBlock } from "@/modules/page-builder/page-builder.types";
-import { sectionsToBuilderBlocks } from "@/modules/page-builder/page-builder.utils";
+import { hasBuilderSections, sectionsToBuilderBlocks } from "@/modules/page-builder/page-builder.utils";
 
 async function getPage(slug: string) {
+  if (!isSupportedBuilderPageSlug(slug)) return null;
+
   const [page, draft] = await Promise.all([
     prisma.page.findUnique({
       where: { slug },
@@ -24,12 +28,11 @@ async function getPage(slug: string) {
   ]);
 
   if (page) return { page, draft };
-  if (slug !== "home") return null;
 
   const createdPage = await prisma.page.create({
     data: {
-      title: "Home",
-      slug: "home",
+      title: slug === "home" ? "Home" : "About",
+      slug,
       status: "PUBLISHED",
       template: "visual-builder"
     },
@@ -41,12 +44,45 @@ async function getPage(slug: string) {
 }
 
 export default async function AdminPageBuilderPage({ params }: { params: Promise<{ slug: string }> }) {
+  await requireAdminAuthority("pages.manage");
   const { slug } = await params;
   const result = await getPage(slug);
   if (!result) notFound();
   const { page, draft } = result;
-  const [{ team, services, posts, forms, qaItems }, { t }] = await Promise.all([getPublicSiteContext(), getServerTranslations()]);
-  const dynamicContent = {
+  const allowedBlockTypes = getAllowedBuilderBlockTypes(page.slug);
+  const [{ t }, dynamicContent] = await Promise.all([
+    getServerTranslations(),
+    allowedBlockTypes ? Promise.resolve(undefined) : getBuilderDynamicContent()
+  ]);
+  const draftBlocks = Array.isArray(draft?.blocks) ? (draft.blocks as BuilderBlock[]) : null;
+  const publishedBlocks = hasBuilderSections(page.sections) || page.slug === "home" ? sectionsToBuilderBlocks(page.sections).filter(isCanvasBlock) : [];
+  const initialBlocks = filterBuilderBlocksForPage(page.slug, draftBlocks ?? publishedBlocks);
+
+  return (
+    <AdminShell requiredAuthority="pages.manage">
+      <div className="admin-page-header">
+        <div>
+          <h1>{t("admin.common.visualPageBuilder")}</h1>
+          <p className="message">{t("admin.common.edit")} {page.title}</p>
+        </div>
+        <Link className="button secondary" href="/admin/pages">
+          {t("admin.common.back")}
+        </Link>
+      </div>
+      <VisualPageBuilder
+        page={{ title: page.title, slug: page.slug, status: page.status }}
+        initialBlocks={initialBlocks}
+        dynamicContent={dynamicContent}
+        hasDraft={Boolean(draft)}
+        allowedBlockTypes={allowedBlockTypes ?? undefined}
+      />
+    </AdminShell>
+  );
+}
+
+async function getBuilderDynamicContent() {
+  const { team, services, posts, forms, qaItems } = await getPublicSiteContext();
+  return {
     team: team.map((member) => ({
       id: "id" in member ? member.id : null,
       name: member.name,
@@ -84,28 +120,6 @@ export default async function AdminPageBuilderPage({ params }: { params: Promise
       category: item.category
     }))
   };
-  const draftBlocks = Array.isArray(draft?.blocks) ? (draft.blocks as BuilderBlock[]) : null;
-  const publishedBlocks = sectionsToBuilderBlocks(page.sections).filter(isCanvasBlock);
-
-  return (
-    <AdminShell>
-      <div className="admin-page-header">
-        <div>
-          <h1>{t("admin.common.visualPageBuilder")}</h1>
-          <p className="message">{t("admin.common.edit")} {page.title}</p>
-        </div>
-        <Link className="button secondary" href="/admin/pages">
-          {t("admin.common.back")}
-        </Link>
-      </div>
-      <VisualPageBuilder
-        page={{ title: page.title, slug: page.slug, status: page.status }}
-        initialBlocks={draftBlocks ?? publishedBlocks}
-        dynamicContent={dynamicContent}
-        hasDraft={Boolean(draft)}
-      />
-    </AdminShell>
-  );
 }
 
 function isCanvasBlock(block: BuilderBlock) {

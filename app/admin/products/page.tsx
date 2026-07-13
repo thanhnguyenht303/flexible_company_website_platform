@@ -15,7 +15,7 @@ export default async function AdminProductsPage() {
   const [products, { language, t }] = await Promise.all([getProducts(), getServerTranslations()]);
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="products.manage">
       <div className="admin-page-header">
         <h1>{t("admin.common.products")}</h1>
         <Link className="button" href="/admin/products/new">
@@ -26,12 +26,12 @@ export default async function AdminProductsPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>{t("admin.common.image")}</th>
-              <th>{t("admin.common.name")}</th>
-              <th>{t("admin.common.slug")}</th>
-              <th>{t("admin.common.status")}</th>
-              <th>{t("admin.common.images")}</th>
-              <th>{t("admin.common.actions")}</th>
+              <th scope="col">{t("admin.common.image")}</th>
+              <th scope="col">{t("admin.common.name")}</th>
+              <th scope="col">{t("admin.common.slug")}</th>
+              <th scope="col">{t("admin.common.status")}</th>
+              <th scope="col">{t("admin.common.images")}</th>
+              <th scope="col">{t("admin.common.actions")}</th>
             </tr>
           </thead>
           <tbody>

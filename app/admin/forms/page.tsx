@@ -39,7 +39,7 @@ export default async function AdminFormsPage({
   });
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="forms.manage">
       <div className="admin-page-header">
         <div>
           <h1>{t("formsFeature.forms.title")}</h1>
@@ -81,15 +81,15 @@ export default async function AdminFormsPage({
         <table className="table">
           <thead>
             <tr>
-              <th>{t("formsFeature.forms.name")}</th>
-              <th>{t("formsFeature.forms.slug")}</th>
-              <th>{t("formsFeature.common.status")}</th>
-              <th>{t("formsFeature.common.sourceType")}</th>
-              <th>{t("formsFeature.forms.fields")}</th>
-              <th>{t("formsFeature.forms.submissions")}</th>
-              <th>{t("formsFeature.common.created")}</th>
-              <th>{t("formsFeature.common.updated")}</th>
-              <th>{t("formsFeature.common.actions")}</th>
+              <th scope="col">{t("formsFeature.forms.name")}</th>
+              <th scope="col">{t("formsFeature.forms.slug")}</th>
+              <th scope="col">{t("formsFeature.common.status")}</th>
+              <th scope="col">{t("formsFeature.common.sourceType")}</th>
+              <th scope="col">{t("formsFeature.forms.fields")}</th>
+              <th scope="col">{t("formsFeature.forms.submissions")}</th>
+              <th scope="col">{t("formsFeature.common.created")}</th>
+              <th scope="col">{t("formsFeature.common.updated")}</th>
+              <th scope="col">{t("formsFeature.common.actions")}</th>
             </tr>
           </thead>
           <tbody>

@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { CareerThemeSettingsForm } from "@/components/admin/CareerThemeSettingsForm";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { JobPostingTableActions } from "@/components/admin/JobPostingTableActions";
+import { getCareerThemeFromSite } from "@/lib/career-theme";
 import { prisma } from "@/lib/db";
 import { getServerTranslations } from "@/lib/i18n/server";
 
@@ -22,27 +24,33 @@ async function getJobs() {
 }
 
 export default async function AdminCareersPage() {
-  const [jobs, { t }] = await Promise.all([getJobs(), getServerTranslations()]);
+  const [jobs, site, { t }] = await Promise.all([
+    getJobs(),
+    prisma.siteSetting.findFirst({ select: { defaultSeo: true } }).catch(() => null),
+    getServerTranslations()
+  ]);
+  const careerTheme = getCareerThemeFromSite(site ?? {});
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="careers.manage">
       <div className="admin-page-header">
         <h1>{t("admin.common.careers")}</h1>
         <Link className="button" href="/admin/careers/new">
           {t("admin.common.new")}
         </Link>
       </div>
+      <CareerThemeSettingsForm theme={careerTheme} />
       <div className="admin-panel">
         <table className="table">
           <thead>
             <tr>
-              <th>{t("admin.common.title")}</th>
-              <th>{t("admin.common.department")}</th>
-              <th>{t("admin.common.location")}</th>
-              <th>{t("admin.common.status")}</th>
-              <th>{t("admin.common.applications")}</th>
-              <th>{t("admin.common.published")}</th>
-              <th>{t("admin.common.actions")}</th>
+              <th scope="col">{t("admin.common.title")}</th>
+              <th scope="col">{t("admin.common.department")}</th>
+              <th scope="col">{t("admin.common.location")}</th>
+              <th scope="col">{t("admin.common.status")}</th>
+              <th scope="col">{t("admin.common.applications")}</th>
+              <th scope="col">{t("admin.common.published")}</th>
+              <th scope="col">{t("admin.common.actions")}</th>
             </tr>
           </thead>
           <tbody>

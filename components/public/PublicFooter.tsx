@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/components/public/LanguageProvider";
 import type { PublicFooterPartner } from "@/lib/footer-partners";
@@ -13,13 +14,14 @@ type PublicFooterProps = {
   };
   showPrivacy: boolean;
   partners: PublicFooterPartner[];
+  style?: CSSProperties;
 };
 
-export function PublicFooter({ site, showPrivacy, partners }: PublicFooterProps) {
+export function PublicFooter({ site, showPrivacy, partners, style }: PublicFooterProps) {
   const { t } = useLanguage();
 
   return (
-    <footer className="site-footer">
+    <footer className="site-footer" style={style}>
       {partners.length ? (
         <div className="container footer-collaborators">
           <div>
@@ -32,7 +34,13 @@ export function PublicFooter({ site, showPrivacy, partners }: PublicFooterProps)
                 <>
                   <span className="footer-partner-logo">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/api/media/${partner.logoId}`} alt="" />
+                    <img
+                      className="footer-partner-logo-image"
+                      src={`/api/media/${partner.logoId}`}
+                      alt={`${partner.name} logo`}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </span>
                   <span>{partner.name}</span>
                 </>

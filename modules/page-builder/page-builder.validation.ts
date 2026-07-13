@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSafeCssColor } from "../../lib/css-color";
 import { isSafePublicUrl } from "@/lib/safe-url";
 
 const publicUrlSchema = z
@@ -9,10 +10,7 @@ const publicUrlSchema = z
 const colorValueSchema = z
   .string()
   .max(80)
-  .refine(
-    (value) => !value || /^(#[0-9A-Fa-f]{3,8}|transparent|inherit|currentColor)$/.test(value),
-    "Use a hex color or a safe CSS color keyword."
-  );
+  .refine((value) => !value || isSafeCssColor(value), "Use a valid CSS color.");
 
 const textElementStyleSchema = z.object({
   fontFamily: z.string().max(120).optional(),
@@ -27,7 +25,7 @@ const textElementStyleSchema = z.object({
 
 const blockSchema = z.object({
   id: z.string().min(1),
-  type: z.enum(["hero", "text", "image", "button", "banner", "cards", "twoColumn", "divider", "spacer", "contactCta", "team", "services", "blog", "form", "qa"]),
+  type: z.enum(["hero", "text", "image", "button", "video", "gallery", "banner", "static", "cards", "twoColumn", "divider", "spacer", "contactCta", "team", "services", "blog", "form", "qa"]),
   enabled: z.boolean().default(true),
   title: z.string().max(240).optional(),
   subtitle: z.string().max(500).optional(),
@@ -35,8 +33,22 @@ const blockSchema = z.object({
   quote: z.string().max(1000).optional(),
   buttonText: z.string().max(120).optional(),
   buttonUrl: publicUrlSchema.optional(),
+  buttonOpenInNewTab: z.boolean().optional(),
+  buttonSize: z.enum(["small", "medium", "large"]).optional(),
+  buttonVariant: z.enum(["solid", "outline", "ghost"]).optional(),
+  buttonBackgroundColor: colorValueSchema.optional(),
+  buttonTextColor: colorValueSchema.optional(),
+  buttonBorderColor: colorValueSchema.optional(),
+  buttonHoverBackground: colorValueSchema.optional(),
+  buttonHoverColor: colorValueSchema.optional(),
+  buttonHoverBorderColor: colorValueSchema.optional(),
+  buttonDisabledBackground: colorValueSchema.optional(),
+  buttonDisabledColor: colorValueSchema.optional(),
+  videoUrl: publicUrlSchema.optional(),
   imageId: z.string().optional(),
   imageAlt: z.string().max(180).optional(),
+  galleryImageIds: z.array(z.string().max(180)).max(24).optional(),
+  galleryLayout: z.enum(["grid", "mosaic", "strip"]).optional(),
   href: publicUrlSchema.optional(),
   cards: z
     .array(
@@ -58,6 +70,7 @@ const blockSchema = z.object({
   background: colorValueSchema.optional(),
   color: colorValueSchema.optional(),
   borderColor: colorValueSchema.optional(),
+  overlayColor: colorValueSchema.optional(),
   borderRadius: z.coerce.number().min(0).max(80).optional(),
   shadow: z.enum(["none", "soft", "medium", "strong"]).optional(),
   opacity: z.coerce.number().min(0.1).max(1).optional(),
@@ -70,6 +83,9 @@ const blockSchema = z.object({
   lineHeight: z.coerce.number().min(0.8).max(3).optional(),
   letterSpacing: z.coerce.number().min(-2).max(12).optional(),
   paragraphSpacing: z.coerce.number().min(0).max(80).optional(),
+  titleBodyGap: z.coerce.number().min(0).max(120).optional(),
+  bodyButtonGap: z.coerce.number().min(0).max(120).optional(),
+  overlayOpacity: z.coerce.number().min(0).max(0.95).optional(),
   gap: z.coerce.number().min(0).max(120).optional(),
   padding: z.coerce.number().min(0).max(120).optional(),
   paddingY: z.coerce.number().min(0).max(180).optional(),

@@ -4,8 +4,9 @@ import { fail, ok, validationFail } from "@/lib/api-response";
 import { prisma } from "@/lib/db";
 import { deleteFileFolder, saveResumeFile } from "@/lib/file-storage";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { rejectOversizedRequest } from "@/lib/request-size";
+import { readRequestWithBodyLimit } from "@/lib/request-size";
 import { env } from "@/lib/env";
+import { sendAdminNotification } from "@/modules/email/email.service";
 
 const jobApplicationSchema = z.object({
   name: z.string().min(2, "Name is required").max(120),
@@ -35,10 +36,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   if (!job) return fail("NOT_FOUND", "Job posting is not available.", 404);
 
-  const oversized = rejectOversizedRequest(request, env.MAX_FILE_UPLOAD_MB, "Resume upload");
-  if (oversized) return oversized;
+  const limited = await readRequestWithBodyLimit(request, env.MAX_FILE_UPLOAD_MB, "Resume upload");
+  if ("response" in limited) return limited.response;
 
-  const formData = await request.formData();
+  const formData = await limited.request.formData();
   if (stringField(formData.get("website")).trim()) {
     return fail("VALIDATION_ERROR", "Please check the submitted data.", 422);
   }
@@ -116,6 +117,29 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       sourceId: job.id
     }
   });
+
+  const site = await prisma.siteSetting.findFirst({ select: { siteName: true } });
+  const adminLink = `${env.NEXT_PUBLIC_SITE_URL}/admin/careers/${job.id}/applications`;
+  await sendAdminNotification({
+    recipients: job.applyEmail ? [job.applyEmail] : [],
+    templateKey: "career.application.received",
+    subject: `New application for ${job.title}`,
+    body: `Applicant: ${parsed.data.name}\nEmail: ${parsed.data.email}\nPhone: ${parsed.data.phone || "Not provided"}\nPosition: ${job.title}\nReview: ${adminLink}`,
+    variables: {
+      applicantName: parsed.data.name,
+      applicantEmail: parsed.data.email,
+      applicantPhone: parsed.data.phone || "Not provided",
+      positionTitle: job.title,
+      applicationDate: completedApplication.createdAt.toISOString(),
+      coverMessage: parsed.data.message || "",
+      adminLink,
+      siteName: site?.siteName || ""
+    },
+    replyTo: parsed.data.email,
+    relatedType: "jobApplication",
+    relatedId: completedApplication.id,
+    metadata: { jobId: job.id, resumeFileId: fileAsset.id }
+  }).catch((error) => console.warn("Career application notification failed.", error));
 
   return ok({ id: completedApplication.id }, { status: 201 });
 }

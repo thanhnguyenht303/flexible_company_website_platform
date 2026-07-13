@@ -70,7 +70,7 @@ export function ContactForm() {
         {state.status === "submitting" ? t("common.sending") : t("common.send")}
       </button>
       {state.message ? (
-        <p className={`message ${state.status === "error" ? "error" : ""}`}>{state.message}</p>
+        <p className={`message ${state.status === "error" ? "error" : ""}`} role={state.status === "error" ? "alert" : "status"} aria-live={state.status === "error" ? "assertive" : "polite"}>{state.message}</p>
       ) : null}
     </form>
   );

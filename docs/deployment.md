@@ -33,6 +33,12 @@ SESSION_COOKIE_NAME=__Host-cw_session
 SESSION_EXPIRES_HOURS=24
 MAX_UPLOAD_MB=10
 MAX_FILE_UPLOAD_MB=10
+MAIL_DRIVER=smtp
+SMTP_HOST=<smtp host>
+SMTP_PORT=587
+SMTP_USER=<smtp user>
+SMTP_PASSWORD=<smtp password>
+SMTP_FROM=no-reply@your-domain.com
 ```
 
 Use the `postgres` host in `DATABASE_URL` when the app runs inside Docker Compose. Use `localhost` only for host-machine tools talking to the forwarded database port.
@@ -63,6 +69,7 @@ docker compose up -d app
 4. Keep `client_max_body_size` higher than `MAX_UPLOAD_MB` and `MAX_FILE_UPLOAD_MB`; the default Nginx file sets `12m`.
 5. Start Nginx and enable HTTPS with Certbot or your certificate manager.
 6. Verify `/`, `/admin/login`, `/api/media/<id>`, and a public form submission.
+7. Verify Email Center SMTP tests if the deployment will send workflow mail.
 
 ## Data That Must Be Backed Up
 
@@ -102,5 +109,7 @@ pnpm restore:db backups/db_YYYYMMDD_HHMMSS.sql
 - Site logo, theme background, post images, product/service galleries, team photos, footer logos, and page-builder images render through `/api/media/:id`.
 - Public contact, service review, job application, and custom form submissions respect validation and rate limits.
 - `/qa` loads published Q&A items and the seeded `ask-a-question` form after `pnpm db:seed`.
+- `/admin/email/settings` SMTP test succeeds when mail sending is required.
+- Email templates save only registered or custom variables with exact `{{variableName}}` syntax.
 - Admin-only private file downloads require a user with `careers.manage`, `forms.manage`, or `leads.manage`.
 - `ALLOW_ADMIN_BOOTSTRAP=false` after bootstrap.

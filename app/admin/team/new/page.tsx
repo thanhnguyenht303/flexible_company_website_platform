@@ -7,7 +7,7 @@ export default async function NewTeamMemberPage() {
   const { t } = await getServerTranslations();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="team.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.newEmployee")}</h1>
         <Link className="button secondary" href="/admin/team">

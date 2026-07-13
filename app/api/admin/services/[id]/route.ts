@@ -5,6 +5,7 @@ import { fail, ok, validationFail } from "@/lib/api-response";
 import { requireAdminUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
+import { getGalleryIds, getRequestedGalleryRemovalIds } from "@/lib/gallery-assets";
 import { deleteEntityImageFolder, deleteStoredImage, saveEntityImage } from "@/lib/image-storage";
 import { hasPermission } from "@/lib/permissions";
 import { rejectOversizedRequest } from "@/lib/request-size";
@@ -76,9 +77,12 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const currentGallery = getGalleryIds(existing.gallery);
-  const removeImageIds = new Set(input.removeImageIds ?? []);
-  const removedAssets = removeImageIds.size
-    ? await prisma.mediaAsset.findMany({ where: { id: { in: [...removeImageIds] } } })
+  const galleryRemovalIds = getRequestedGalleryRemovalIds(currentGallery, input.removeImageIds ?? []);
+  const removeImageIds = new Set(galleryRemovalIds);
+  const removedAssets = galleryRemovalIds.length
+    ? await prisma.mediaAsset.findMany({
+        where: { id: { in: galleryRemovalIds }, filename: { startsWith: `services/${id}/` } }
+      })
     : [];
 
   for (const asset of removedAssets) {
@@ -87,8 +91,8 @@ export async function PATCH(request: Request, { params }: Params) {
     }
   }
 
-  if (removeImageIds.size) {
-    await prisma.mediaAsset.deleteMany({ where: { id: { in: [...removeImageIds] } } });
+  if (removedAssets.length) {
+    await prisma.mediaAsset.deleteMany({ where: { id: { in: removedAssets.map(({ id: assetId }) => assetId) } } });
   }
 
   const retainedGallery = currentGallery.filter((id) => !removeImageIds.has(id));
@@ -197,10 +201,6 @@ async function saveServiceImages(serviceId: string, serviceName: string, images:
   }
 
   return imageIds;
-}
-
-function getGalleryIds(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function revalidateServicePaths(slug: string) {

@@ -1,22 +1,25 @@
+import { sendAdminNotification } from "@/modules/email/email.service";
+
 type FormNotification = {
   recipients: string[];
   subject: string;
   lines: string[];
   replyTo?: string | null;
+  relatedType?: string;
+  relatedId?: string;
+  templateKey?: string;
+  variables?: Record<string, string | number | boolean | null | undefined>;
 };
 
-export async function sendFormNotification({ recipients, subject, lines, replyTo }: FormNotification) {
-  if (!recipients.length) return;
-
-  const driver = process.env.MAIL_DRIVER ?? "none";
-  if (driver === "none") return;
-
-  // SMTP/provider delivery is intentionally centralized here so the form workflow
-  // stores submissions even when email infrastructure is not configured yet.
-  console.warn("MAIL_DRIVER is configured, but no mail provider adapter is implemented yet.", {
+export async function sendFormNotification({ recipients, subject, lines, replyTo, relatedType = "formSubmission", relatedId = "unknown", templateKey, variables }: FormNotification) {
+  return sendAdminNotification({
     recipients,
     subject,
+    body: lines.join("\n"),
     replyTo,
-    preview: lines.slice(0, 8)
+    relatedType,
+    relatedId,
+    templateKey,
+    variables
   });
 }

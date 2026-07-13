@@ -1,20 +1,24 @@
 import { revalidatePath } from "next/cache";
-import { PublishStatus } from "@prisma/client";
+import { PostStatus, Prisma } from "@prisma/client";
 import { fail, ok, validationFail } from "@/lib/api-response";
 import { requireAdminUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
-import { saveEntityImage } from "@/lib/image-storage";
 import { hasPermission } from "@/lib/permissions";
-import { rejectOversizedRequest } from "@/lib/request-size";
-import { blogPostSchema, normalizeBlogPostInput } from "@/modules/blog/blog.validation";
+import { slugify } from "@/lib/slug";
+import { articleDocumentToText } from "@/modules/blog/article-document";
+import {
+  blogDraftSchema,
+  normalizeBlogPostInput,
+  validatePublishablePost
+} from "@/modules/blog/blog.validation";
 
 export async function GET() {
   const user = await requireAdminUser();
   if (!hasPermission(user, "posts.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
 
   const posts = await prisma.post.findMany({
-    orderBy: [{ createdAt: "desc" }],
+    include: { author: { select: { displayName: true, username: true } } },
+    orderBy: [{ updatedAt: "desc" }],
     take: 100
   });
 
@@ -25,167 +29,83 @@ export async function POST(request: Request) {
   const user = await requireAdminUser();
   if (!hasPermission(user, "posts.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
 
-  const oversized = rejectOversizedRequest(request, env.MAX_UPLOAD_MB, "Post upload");
-  if (oversized) return oversized;
-
-  const { fields, image, inlineImages } = await parsePostRequest(request);
-  const parsed = blogPostSchema.safeParse(fields);
+  const body = await request.json().catch(() => null);
+  const parsed = blogDraftSchema.safeParse(body);
   if (!parsed.success) return validationFail(parsed.error);
 
   const input = normalizeBlogPostInput(parsed.data);
-  const existing = await prisma.post.findUnique({ where: { slug: input.slug } });
-
-  if (existing) {
-    return fail("SLUG_EXISTS", "A post with this slug already exists.", 409, {
-      slug: "Slug must be unique."
+  if (parsed.data.contentJson != null && !input.contentJson) {
+    return fail("INVALID_DOCUMENT", "The article document contains unsupported content.", 422, {
+      contentJson: "The article document could not be saved."
     });
   }
 
-  let post = await prisma.post.create({
-    data: {
-      title: input.title,
-      titleVi: input.titleVi || null,
-      slug: input.slug,
-      excerpt: input.excerpt || null,
-      excerptVi: input.excerptVi || null,
-      content: input.content,
-      contentVi: input.contentVi || null,
-      status: input.status as PublishStatus,
-      tagNames: [],
-      publishedAt: input.status === PublishStatus.PUBLISHED ? new Date() : null
-    }
+  const status = (input.status ?? "DRAFT") as PostStatus;
+  const publishErrors = validatePublishablePost({
+    title: input.title,
+    content: input.content,
+    contentJson: input.contentJson,
+    featuredImageAlt: input.featuredImageAlt,
+    status,
+    scheduledAt: input.scheduledAt
   });
 
-  const contentWithInlineImages = await saveInlinePostImages(post.id, post.title, post.content, inlineImages, user.id);
-  if (contentWithInlineImages !== post.content) {
-    post = await prisma.post.update({
-      where: { id: post.id },
-      data: { content: contentWithInlineImages }
-    });
+  if (status !== PostStatus.DRAFT && status !== PostStatus.ARCHIVED && Object.keys(publishErrors).length) {
+    return fail("PUBLISH_VALIDATION", "Complete the publishing checklist.", 422, publishErrors);
   }
 
-  if (image) {
-    const savedImage = await saveEntityImage({ entityType: "posts", entityId: post.id, file: image });
-    if (savedImage) {
-      const asset = await prisma.mediaAsset.create({
-        data: {
-          filename: savedImage.relativePath,
-          originalName: savedImage.originalName,
-          mimeType: savedImage.mimeType,
-          sizeBytes: savedImage.sizeBytes,
-          url: `/api/media/pending`,
-          altText: post.title,
-          uploadedById: user.id
-        }
-      });
+  const slug = await createUniqueSlug(input.slug || input.title || "untitled-story");
+  const contentText = articleDocumentToText(input.contentJson) || input.content;
+  const now = new Date();
+  const isImmediatelyPublic = status === PostStatus.PUBLISHED || status === PostStatus.UNLISTED;
+  const scheduledAt = status === PostStatus.SCHEDULED && input.scheduledAt ? new Date(input.scheduledAt) : null;
 
-      post = await prisma.post.update({
-        where: { id: post.id },
-        data: {
-          featuredImageId: asset.id
-        }
-      });
+  const post = await prisma.post.create({
+    data: {
+      title: input.title,
+      titleVi: input.titleVi?.trim() || null,
+      slug,
+      excerpt: input.excerpt?.trim() || null,
+      excerptVi: input.excerptVi?.trim() || null,
+      content: contentText,
+      contentVi: input.contentVi?.trim() || null,
+      ...(input.contentJson ? { contentJson: input.contentJson as Prisma.InputJsonValue } : {}),
+      ...(input.contentJsonVi ? { contentJsonVi: input.contentJsonVi as Prisma.InputJsonValue } : {}),
+      contentText,
+      status,
+      tagNames: input.tagNames,
+      featuredImageAlt: input.featuredImageAlt?.trim() || null,
+      seoTitle: input.seoTitle?.trim() || null,
+      seoDescription: input.seoDescription?.trim() || null,
+      canonicalUrl: input.canonicalUrl?.trim() || null,
+      scheduledAt,
+      publishedAt: isImmediatelyPublic ? now : null,
+      firstPublishedAt: isImmediatelyPublic ? now : scheduledAt,
+      authorId: user.id
+    },
+    include: { author: { select: { displayName: true, username: true } } }
+  });
 
-      await prisma.mediaAsset.update({
-        where: { id: asset.id },
-        data: { url: `/api/media/${asset.id}` }
-      });
-    }
-  }
-
-  revalidatePath("/blog");
-  revalidatePath(`/blog/${post.slug}`);
-  revalidatePath("/admin/posts");
-  revalidatePath("/");
-
+  revalidatePostPaths(post.slug);
   return ok(post, { status: 201 });
 }
 
-async function parsePostRequest(request: Request) {
-  const contentType = request.headers.get("content-type") ?? "";
+async function createUniqueSlug(value: string) {
+  const base = slugify(value) || "untitled-story";
+  let candidate = base;
+  let suffix = 2;
 
-  if (contentType.includes("multipart/form-data")) {
-    const formData = await request.formData();
-    const imageValue = formData.get("featuredImage");
-    const inlineFiles = formData
-      .getAll("inlineImages")
-      .filter((value): value is File => value instanceof File && value.size > 0);
-    const inlineTokens = formData
-      .getAll("inlineImageTokens")
-      .filter((value): value is string => typeof value === "string");
-    const inlineAltTexts = formData
-      .getAll("inlineImageAltTexts")
-      .filter((value): value is string => typeof value === "string");
-
-    return {
-      fields: {
-        title: stringField(formData.get("title")),
-        titleVi: stringField(formData.get("titleVi")),
-        slug: stringField(formData.get("slug")),
-        excerpt: stringField(formData.get("excerpt")),
-        excerptVi: stringField(formData.get("excerptVi")),
-        content: stringField(formData.get("content")),
-        contentVi: stringField(formData.get("contentVi")),
-        status: stringField(formData.get("status")) || "DRAFT"
-      },
-      image: imageValue instanceof File && imageValue.size > 0 ? imageValue : null,
-      inlineImages: inlineFiles.map((file, index) => ({
-        file,
-        token: inlineTokens[index] ?? "",
-        altText: inlineAltTexts[index] || "Article image"
-      }))
-    };
+  while (await prisma.post.findUnique({ where: { slug: candidate }, select: { id: true } })) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
   }
 
-  return {
-    fields: await request.json().catch(() => null),
-    image: null,
-    inlineImages: []
-  };
+  return candidate;
 }
 
-function stringField(value: FormDataEntryValue | null) {
-  return typeof value === "string" ? value : "";
-}
-
-async function saveInlinePostImages(
-  postId: string,
-  postTitle: string,
-  content: string,
-  inlineImages: Array<{ file: File; token: string; altText: string }>,
-  userId: string
-) {
-  let nextContent = content;
-
-  for (const inlineImage of inlineImages) {
-    if (!inlineImage.token || !nextContent.includes(`post-image:${inlineImage.token}`)) continue;
-
-    const savedImage = await saveEntityImage({
-      entityType: "posts",
-      entityId: postId,
-      file: inlineImage.file
-    });
-    if (!savedImage) continue;
-
-    const asset = await prisma.mediaAsset.create({
-      data: {
-        filename: savedImage.relativePath,
-        originalName: savedImage.originalName,
-        mimeType: savedImage.mimeType,
-        sizeBytes: savedImage.sizeBytes,
-        url: "/api/media/pending",
-        altText: inlineImage.altText || postTitle,
-        uploadedById: userId
-      }
-    });
-
-    await prisma.mediaAsset.update({
-      where: { id: asset.id },
-      data: { url: `/api/media/${asset.id}` }
-    });
-
-    nextContent = nextContent.replaceAll(`post-image:${inlineImage.token}`, `/api/media/${asset.id}`);
-  }
-
-  return nextContent;
+function revalidatePostPaths(slug: string) {
+  revalidatePath("/");
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${slug}`);
+  revalidatePath("/admin/posts");
 }

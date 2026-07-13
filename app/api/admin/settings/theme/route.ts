@@ -10,7 +10,7 @@ import { themeSettingsSchema } from "@/lib/validation";
 
 export async function PUT(request: Request) {
   const user = await requireAdminUser();
-  if (!hasPermission(user, "theme.update")) return fail("FORBIDDEN", "Forbidden.", 403);
+  if (!hasPermission(user, "theme.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
 
   const oversized = rejectOversizedRequest(request, env.MAX_UPLOAD_MB, "Theme upload");
   if (oversized) return oversized;

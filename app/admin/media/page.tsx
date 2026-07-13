@@ -5,7 +5,7 @@ export default async function AdminMediaPage() {
   const { t } = await getServerTranslations();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="media.manage">
       <div className="admin-page-header">
         <h1>{t("admin.common.media")}</h1>
         <button className="button" type="button">
@@ -16,9 +16,9 @@ export default async function AdminMediaPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>{t("admin.common.filename")}</th>
-              <th>{t("admin.common.type")}</th>
-              <th>{t("admin.common.size")}</th>
+              <th scope="col">{t("admin.common.filename")}</th>
+              <th scope="col">{t("admin.common.type")}</th>
+              <th scope="col">{t("admin.common.size")}</th>
             </tr>
           </thead>
           <tbody>

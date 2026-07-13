@@ -19,7 +19,7 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
   if (!job) notFound();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="careers.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.editJob")}</h1>
         <Link className="button secondary" href="/admin/careers">

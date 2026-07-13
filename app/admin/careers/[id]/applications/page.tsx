@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { prisma } from "@/lib/db";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { EmailComposeForm } from "@/components/admin/email/EmailComposeForm";
+import { getAdminUser } from "@/lib/auth";
+import { hasAuthority } from "@/lib/permissions";
 
 async function getJobWithApplications(id: string) {
   return prisma.jobPosting.findUnique({
@@ -22,11 +25,13 @@ async function getJobWithApplications(id: string) {
 
 export default async function JobApplicationsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [job, { t }] = await Promise.all([getJobWithApplications(id), getServerTranslations()]);
+  const [job, { t }, user, site] = await Promise.all([getJobWithApplications(id), getServerTranslations(), getAdminUser(), prisma.siteSetting.findFirst({ select: { siteName: true } })]);
   if (!job) notFound();
+  const canEmail = hasAuthority(user, "email.manage");
+  const templates = canEmail ? await prisma.emailTemplate.findMany({ where: { category: "career", isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, key: true, subject: true, body: true, category: true, customVariables: true } }) : [];
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="careers.manage">
       <div className="admin-page-header">
         <div>
           <h1>{t("admin.pageTitles.applications")}</h1>
@@ -50,12 +55,13 @@ export default async function JobApplicationsPage({ params }: { params: Promise<
         <table className="table">
           <thead>
             <tr>
-              <th>{t("admin.common.applicant")}</th>
-              <th>{t("admin.common.contact")}</th>
-              <th>{t("admin.common.company")}</th>
-              <th>{t("admin.common.submitted")}</th>
-              <th>{t("admin.common.resume")}</th>
-              <th>{t("admin.common.note")}</th>
+              <th scope="col">{t("admin.common.applicant")}</th>
+              <th scope="col">{t("admin.common.contact")}</th>
+              <th scope="col">{t("admin.common.company")}</th>
+              <th scope="col">{t("admin.common.submitted")}</th>
+              <th scope="col">{t("admin.common.resume")}</th>
+              <th scope="col">{t("admin.common.note")}</th>
+              {canEmail ? <th scope="col">{t("admin.email.compose")}</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -81,11 +87,12 @@ export default async function JobApplicationsPage({ params }: { params: Promise<
                   )}
                 </td>
                 <td>{application.message || t("admin.common.noNote")}</td>
+                {canEmail ? <td><details><summary className="button secondary">{t("admin.email.compose")}</summary><EmailComposeForm compact initialTo={application.email} templates={templates} relatedType="jobApplication" relatedId={application.id} variables={{ applicantName: application.name, applicantEmail: application.email, applicantPhone: application.phone || "", positionTitle: job.title, applicationDate: application.createdAt.toISOString(), siteName: site?.siteName || "" }} /></details></td> : null}
               </tr>
             ))}
             {job.applications.length === 0 ? (
               <tr>
-                <td colSpan={6}>{t("admin.empty.applications")}</td>
+                <td colSpan={canEmail ? 7 : 6}>{t("admin.empty.applications")}</td>
               </tr>
             ) : null}
           </tbody>

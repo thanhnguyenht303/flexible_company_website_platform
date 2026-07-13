@@ -51,19 +51,19 @@ export function JobApplicationForm({ jobId, jobTitle }: JobApplicationFormProps)
       </div>
       <div className="field">
         <label htmlFor="name">{t("common.name")}</label>
-        <input id="name" name="name" required minLength={2} />
+        <input id="name" name="name" autoComplete="name" required minLength={2} />
       </div>
       <div className="field">
         <label htmlFor="email">{t("common.email")}</label>
-        <input id="email" name="email" type="email" required />
+        <input id="email" name="email" type="email" autoComplete="email" required />
       </div>
       <div className="field">
         <label htmlFor="phone">{t("common.phone")}</label>
-        <input id="phone" name="phone" />
+        <input id="phone" name="phone" type="tel" autoComplete="tel" />
       </div>
       <div className="field">
         <label htmlFor="companyName">{t("forms.job.currentCompany")}</label>
-        <input id="companyName" name="companyName" />
+        <input id="companyName" name="companyName" autoComplete="organization" />
       </div>
       <div className="field">
         <label htmlFor="resume">{t("forms.job.resume")}</label>
@@ -88,7 +88,7 @@ export function JobApplicationForm({ jobId, jobTitle }: JobApplicationFormProps)
         {state.status === "submitting" ? t("common.sending") : t("common.apply")}
       </button>
       {state.message ? (
-        <p className={`message ${state.status === "error" ? "error" : ""}`}>{state.message}</p>
+        <p className={`message ${state.status === "error" ? "error" : ""}`} role={state.status === "error" ? "alert" : "status"} aria-live={state.status === "error" ? "assertive" : "polite"}>{state.message}</p>
       ) : null}
     </form>
   );

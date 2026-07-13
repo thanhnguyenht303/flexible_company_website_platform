@@ -38,7 +38,7 @@ export default async function AdminLeadsPage({
   const query = new URLSearchParams(Object.entries(params).filter(([, value]) => Boolean(value)) as Array<[string, string]>);
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="leads.manage">
       <div className="admin-page-header">
         <div>
           <h1>{t("formsFeature.leads.title")}</h1>
@@ -89,14 +89,14 @@ export default async function AdminLeadsPage({
         <table className="table">
           <thead>
             <tr>
-              <th>{t("formsFeature.common.created")}</th>
-              <th>{t("common.name")}</th>
-              <th>{t("formsFeature.leads.email")}</th>
-              <th>{t("formsFeature.leads.phone")}</th>
-              <th>{t("formsFeature.leads.company")}</th>
-              <th>{t("formsFeature.common.status")}</th>
-              <th>{t("formsFeature.leads.priority")}</th>
-              <th>{t("formsFeature.common.actions")}</th>
+              <th scope="col">{t("formsFeature.common.created")}</th>
+              <th scope="col">{t("common.name")}</th>
+              <th scope="col">{t("formsFeature.leads.email")}</th>
+              <th scope="col">{t("formsFeature.leads.phone")}</th>
+              <th scope="col">{t("formsFeature.leads.company")}</th>
+              <th scope="col">{t("formsFeature.common.status")}</th>
+              <th scope="col">{t("formsFeature.leads.priority")}</th>
+              <th scope="col">{t("formsFeature.common.actions")}</th>
             </tr>
           </thead>
           <tbody>

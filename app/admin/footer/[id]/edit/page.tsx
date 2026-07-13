@@ -19,7 +19,7 @@ export default async function EditFooterPartnerPage({ params }: { params: Promis
   if (!partner) notFound();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="footer.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.editFooterCollaborator")}</h1>
         <Link className="button secondary" href="/admin/footer">

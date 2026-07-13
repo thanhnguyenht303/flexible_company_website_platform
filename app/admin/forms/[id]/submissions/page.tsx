@@ -31,7 +31,7 @@ export default async function FormSubmissionsPage({
   });
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="forms.manage">
       <div className="admin-page-header">
         <div>
           <h1>{t("formsFeature.submissions.title", { name: form.name })}</h1>
@@ -69,11 +69,11 @@ export default async function FormSubmissionsPage({
         <table className="table">
           <thead>
             <tr>
-              <th>{t("formsFeature.submissions.submittedAt")}</th>
-              <th>{t("formsFeature.submissions.submitter")}</th>
-              <th>{t("formsFeature.common.status")}</th>
-              <th>{t("formsFeature.submissions.linkedLead")}</th>
-              <th>{t("formsFeature.submissions.values")}</th>
+              <th scope="col">{t("formsFeature.submissions.submittedAt")}</th>
+              <th scope="col">{t("formsFeature.submissions.submitter")}</th>
+              <th scope="col">{t("formsFeature.common.status")}</th>
+              <th scope="col">{t("formsFeature.submissions.linkedLead")}</th>
+              <th scope="col">{t("formsFeature.submissions.values")}</th>
             </tr>
           </thead>
           <tbody>

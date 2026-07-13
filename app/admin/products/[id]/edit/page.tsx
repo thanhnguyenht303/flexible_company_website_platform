@@ -30,7 +30,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   if (!data) notFound();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="products.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.editProduct")}</h1>
         <Link className="button secondary" href="/admin/products">

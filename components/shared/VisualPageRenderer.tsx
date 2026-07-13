@@ -5,6 +5,7 @@ import { localizedField } from "@/lib/i18n/content";
 import { defaultLanguage, translate, type Language } from "@/lib/i18n/translations";
 import { slugify } from "@/lib/slug";
 import type { PublicForm } from "@/modules/forms/forms.types";
+import { getBuilderBlockPaintColors } from "@/modules/page-builder/page-builder.colors";
 import type { BuilderBlock } from "@/modules/page-builder/page-builder.types";
 
 export type DynamicBuilderContent = {
@@ -68,12 +69,15 @@ export function VisualPageRenderer({ blocks, editing = false, includeDisabled = 
   const visibleBlocks = blocks.filter((block) => block.enabled || includeDisabled || editing);
   const usesCanvas = visibleBlocks.some(isCanvasBlock);
   const canvasHeight = getVisualCanvasHeight(visibleBlocks);
+  const canvasBlocks = usesCanvas
+    ? [...visibleBlocks].sort((first, second) => (first.canvasY ?? 0) - (second.canvasY ?? 0))
+    : visibleBlocks;
 
   if (usesCanvas || !visibleBlocks.length) {
     return (
       <div className={editing ? "visual-page visual-page--editing visual-page--canvas" : "visual-page visual-page--canvas"}>
         <div className="visual-page-canvas" style={{ "--visual-canvas-height": `${canvasHeight}px` } as React.CSSProperties}>
-          {visibleBlocks.map((block) => (
+          {canvasBlocks.map((block) => (
             <BuilderBlockView block={block} editing={editing} canvas dynamicContent={dynamicContent} language={language} key={block.id} />
           ))}
           {!visibleBlocks.length ? <div className="visual-page-empty" aria-hidden="true" /> : null}
@@ -109,14 +113,24 @@ export function BuilderBlockView({
   const titleStyle = block.textStyle?.title;
   const bodyStyle = block.textStyle?.body;
   const shadow = block.shadow ?? getDefaultShadow(block);
+  const buttonBackgroundColor = block.buttonBackgroundColor || (block.type === "button" ? block.background : undefined) || "var(--color-primary)";
+  const buttonTextColor = block.buttonTextColor || (block.type === "button" ? titleStyle?.color || block.color : undefined) || "#fff";
+  const buttonBorderColor = block.buttonBorderColor || (block.buttonVariant === "solid" ? "transparent" : buttonBackgroundColor);
+  const { backgroundColor: blockBackgroundColor, textColor: blockTextColor, borderColor: blockBorderColor } =
+    getBuilderBlockPaintColors(block, getDefaultBorderColor(block));
   const style = {
-    "--builder-bg": block.background || "transparent",
-    "--builder-color": block.color || "inherit",
-    "--builder-border-color": block.borderColor || getDefaultBorderColor(block),
+    backgroundColor: blockBackgroundColor,
+    color: blockTextColor,
+    borderColor: blockBorderColor,
+    "--builder-bg": blockBackgroundColor,
+    "--builder-color": blockTextColor,
+    "--builder-border-color": blockBorderColor,
     "--builder-border-radius": `${block.borderRadius ?? getDefaultBorderRadius(block)}px`,
     "--builder-opacity": block.opacity ?? 1,
     "--builder-shadow": getShadowValue(shadow),
-    "--builder-button-bg": block.background || "var(--color-primary)",
+    "--builder-button-bg": buttonBackgroundColor,
+    "--builder-button-color": buttonTextColor,
+    "--builder-button-border-color": buttonBorderColor,
     "--builder-padding-y": `${block.paddingY ?? 56}px`,
     "--builder-font-size": `${block.fontSize ?? 18}px`,
     "--builder-font-family": block.fontFamily || "inherit",
@@ -126,8 +140,12 @@ export function BuilderBlockView({
     "--builder-line-height": block.lineHeight ?? 1.55,
     "--builder-letter-spacing": `${block.letterSpacing ?? 0}px`,
     "--builder-paragraph-spacing": `${block.paragraphSpacing ?? 14}px`,
+    "--builder-title-body-gap": `${block.titleBodyGap ?? getDefaultTitleBodyGap(block)}px`,
+    "--builder-body-button-gap": `${block.bodyButtonGap ?? 24}px`,
     "--builder-gap": `${block.gap ?? 16}px`,
     "--builder-padding": `${block.padding ?? 24}px`,
+    "--builder-overlay-color": block.overlayColor || "#000000",
+    "--builder-overlay-opacity": block.overlayOpacity ?? 0,
     "--builder-block-width": `${block.blockWidth ?? 100}%`,
     "--builder-min-height": `${block.minHeight ?? 0}px`,
     "--builder-spacer-height": `${block.height ?? 48}px`,
@@ -141,6 +159,11 @@ export function BuilderBlockView({
     "--builder-image-offset-y": `${block.imageOffsetY ?? 0}%`,
     "--builder-focal-x": `${block.focalX ?? 50}%`,
     "--builder-focal-y": `${block.focalY ?? 50}%`,
+    "--builder-button-hover-bg": block.buttonHoverBackground || "color-mix(in srgb, var(--builder-button-bg) 84%, #000)",
+    "--builder-button-hover-color": block.buttonHoverColor || buttonTextColor,
+    "--builder-button-hover-border-color": block.buttonHoverBorderColor || block.buttonHoverBackground || buttonBorderColor,
+    "--builder-button-disabled-bg": block.buttonDisabledBackground || "color-mix(in srgb, var(--builder-button-bg) 48%, #fff)",
+    "--builder-button-disabled-color": block.buttonDisabledColor || "color-mix(in srgb, var(--builder-button-color) 54%, #fff)",
     "--builder-title-font-family": titleStyle?.fontFamily || block.fontFamily || "inherit",
     "--builder-title-font-size": `${titleStyle?.fontSize ?? getDefaultTitleFontSize(block)}px`,
     "--builder-title-font-weight": titleStyle?.fontWeight ?? (block.bold ? 800 : 700),
@@ -177,10 +200,12 @@ function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilder
       return (
         <div className="builder-hero">
           <p className="article-kicker builder-body-text">{translate(language, "builder.welcome")}</p>
-          <h1 className="builder-title-text">{block.title}</h1>
-          {block.subtitle ? <p className="builder-body-text">{block.subtitle}</p> : null}
+          <div className="builder-copy">
+            <h1 className="builder-title-text">{block.title}</h1>
+            {block.subtitle ? <p className="builder-body-text">{block.subtitle}</p> : null}
+          </div>
           {block.buttonText && block.buttonUrl ? (
-            <Link className="button" href={block.buttonUrl}>
+            <Link className={`${getButtonClassName(block)} builder-action-button`} href={block.buttonUrl} target={block.buttonOpenInNewTab ? "_blank" : undefined} rel={block.buttonOpenInNewTab ? "noreferrer" : undefined}>
               {block.buttonText}
             </Link>
           ) : null}
@@ -188,7 +213,7 @@ function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilder
       );
     case "text":
       return (
-        <div className="builder-text">
+        <div className="builder-text builder-copy">
           {block.title ? <h2 className="builder-title-text">{block.title}</h2> : null}
           {block.text ? <p className="builder-body-text">{block.text}</p> : null}
         </div>
@@ -205,15 +230,28 @@ function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilder
           {block.title ? <figcaption className="builder-title-text">{block.title}</figcaption> : null}
         </figure>
       );
+    case "video":
+      return <VideoBlock block={block} />;
+    case "gallery":
+      return <GalleryBlock block={block} language={language} />;
     case "button":
       return block.buttonText && block.buttonUrl ? (
-        <Link className="button builder-title-text" href={block.buttonUrl}>
+        <Link className={`${getButtonClassName(block)} builder-title-text`} href={block.buttonUrl} target={block.buttonOpenInNewTab ? "_blank" : undefined} rel={block.buttonOpenInNewTab ? "noreferrer" : undefined}>
           {block.buttonText}
         </Link>
       ) : null;
     case "banner":
       return (
         <div className="builder-banner">
+          <div className="builder-copy">
+            {block.title ? <h2 className="builder-title-text">{block.title}</h2> : null}
+            {block.text ? <p className="builder-body-text">{block.text}</p> : null}
+          </div>
+        </div>
+      );
+    case "static":
+      return (
+        <div className="builder-static builder-copy">
           {block.title ? <h2 className="builder-title-text">{block.title}</h2> : null}
           {block.text ? <p className="builder-body-text">{block.text}</p> : null}
         </div>
@@ -263,10 +301,12 @@ function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilder
     case "contactCta":
       return (
         <div className="builder-banner">
-          {block.title ? <h2 className="builder-title-text">{block.title}</h2> : null}
-          {block.text ? <p className="builder-body-text">{block.text}</p> : null}
+          <div className="builder-copy">
+            {block.title ? <h2 className="builder-title-text">{block.title}</h2> : null}
+            {block.text ? <p className="builder-body-text">{block.text}</p> : null}
+          </div>
           {block.buttonText && block.buttonUrl ? (
-            <Link className="button" href={block.buttonUrl}>
+            <Link className={`${getButtonClassName(block)} builder-action-button`} href={block.buttonUrl} target={block.buttonOpenInNewTab ? "_blank" : undefined} rel={block.buttonOpenInNewTab ? "noreferrer" : undefined}>
               {block.buttonText}
             </Link>
           ) : null}
@@ -298,6 +338,53 @@ function renderBlockContent(block: BuilderBlock, dynamicContent?: DynamicBuilder
   }
 }
 
+function VideoBlock({ block }: { block: BuilderBlock }) {
+  const embedUrl = getSafeVideoEmbedUrl(block.videoUrl ?? "");
+  const directVideoUrl = isDirectVideoUrl(block.videoUrl ?? "") ? block.videoUrl : "";
+
+  return (
+    <figure className="builder-video">
+      {embedUrl ? (
+        <iframe
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+          sandbox="allow-same-origin allow-scripts allow-presentation"
+          src={embedUrl}
+          title={block.title || "Video"}
+        />
+      ) : directVideoUrl ? (
+        <video controls src={directVideoUrl} />
+      ) : (
+        <div className="builder-video-placeholder">{block.text || "Add a YouTube, Vimeo, or direct video URL."}</div>
+      )}
+      {block.title ? <figcaption className="builder-title-text">{block.title}</figcaption> : null}
+    </figure>
+  );
+}
+
+function GalleryBlock({ block, language }: { block: BuilderBlock; language: Language }) {
+  const imageIds = block.galleryImageIds?.filter(Boolean) ?? [];
+
+  return (
+    <figure className={`builder-gallery builder-gallery--${block.galleryLayout ?? "grid"}`}>
+      {block.title ? <figcaption className="builder-title-text">{block.title}</figcaption> : null}
+      {imageIds.length ? (
+        <div className="builder-gallery-grid">
+          {imageIds.map((imageId, index) => (
+            <div className="builder-gallery-item" key={`${imageId}-${index}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/media/${imageId}`} alt={block.imageAlt ?? ""} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="builder-image-placeholder">{translate(language, "builder.image")}</div>
+      )}
+    </figure>
+  );
+}
+
 function QaBlock({ block, items, language }: { block: BuilderBlock; items: NonNullable<DynamicBuilderContent["qaItems"]>; language: Language }) {
   const filtered = items
     .filter((item) => !block.qaCategory || item.category === block.qaCategory)
@@ -316,9 +403,12 @@ function QaBlock({ block, items, language }: { block: BuilderBlock; items: NonNu
       <div className={`qa-list qa-list--embedded qa-list--${block.qaLayout ?? "cards"}`}>
         {filtered.map((item) => (
           <Link className="card qa-card" href={`/qa/${item.slug}`} key={item.id}>
-            {item.category ? <span className="badge">{item.category}</span> : null}
+            <span className="qa-card__meta">
+              {item.category ? <span className="badge">{item.category}</span> : null}
+            </span>
             <h3 className="builder-title-text">{item.title}</h3>
             <p className="builder-body-text">{item.question}</p>
+            <span className="qa-card__action">{translate(language, "formsFeature.qa.viewAnswer")}</span>
           </Link>
         ))}
         {!filtered.length ? <p className="message">No published questions yet.</p> : null}
@@ -435,7 +525,7 @@ function isCanvasBlock(block: BuilderBlock) {
 }
 
 function isRotatableTextBlock(block: BuilderBlock) {
-  return block.type === "hero" || block.type === "text" || block.type === "banner" || block.type === "button" || block.type === "contactCta";
+  return block.type === "hero" || block.type === "text" || block.type === "banner" || block.type === "button" || block.type === "contactCta" || block.type === "static";
 }
 
 function getDefaultTitleFontSize(block: BuilderBlock) {
@@ -444,10 +534,16 @@ function getDefaultTitleFontSize(block: BuilderBlock) {
   return Math.max(20, Math.round((block.fontSize ?? 18) * 1.45));
 }
 
+function getDefaultTitleBodyGap(block: BuilderBlock) {
+  if (block.type === "hero") return 16;
+  if (block.type === "banner" || block.type === "contactCta" || block.type === "static") return 14;
+  return 16;
+}
+
 function getDefaultBorderRadius(block: BuilderBlock) {
   if (block.type === "divider" || block.type === "spacer") return 0;
   if (block.type === "button") return 999;
-  if (block.type === "image") return 10;
+  if (block.type === "image" || block.type === "video" || block.type === "gallery") return 10;
   return 8;
 }
 
@@ -457,8 +553,8 @@ function getDefaultBorderColor(block: BuilderBlock) {
 }
 
 function getDefaultShadow(block: BuilderBlock): NonNullable<BuilderBlock["shadow"]> {
-  if (block.type === "hero" || block.type === "banner" || block.type === "contactCta") return "soft";
-  if (block.type === "image" || block.type === "button") return "medium";
+  if (block.type === "hero" || block.type === "banner" || block.type === "contactCta" || block.type === "static") return "soft";
+  if (block.type === "image" || block.type === "video" || block.type === "gallery" || block.type === "button") return "medium";
   return "none";
 }
 
@@ -470,7 +566,54 @@ function getShadowValue(shadow: NonNullable<BuilderBlock["shadow"]>) {
 }
 
 function hasDefaultHoverEffect(block: BuilderBlock) {
-  return block.type === "button" || block.type === "image" || block.type === "cards";
+  return block.type === "button" || block.type === "image" || block.type === "gallery" || block.type === "cards";
+}
+
+function getButtonClassName(block: BuilderBlock) {
+  return `button builder-button builder-button--${block.buttonVariant ?? "solid"} builder-button--${block.buttonSize ?? "medium"}`;
+}
+
+function getSafeVideoEmbedUrl(value: string) {
+  if (!value) return "";
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+
+    if (url.hostname === "youtu.be") {
+      const id = url.pathname.split("/").filter(Boolean)[0];
+      return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : "";
+    }
+
+    if (url.hostname === "youtube.com" || url.hostname === "www.youtube.com") {
+      const id = url.searchParams.get("v");
+      if (id) return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+      if (url.pathname.startsWith("/embed/")) return `https://www.youtube-nocookie.com${url.pathname}`;
+    }
+
+    if (url.hostname === "vimeo.com" || url.hostname === "www.vimeo.com") {
+      const id = url.pathname.split("/").filter(Boolean).find((part) => /^\d+$/.test(part));
+      return id ? `https://player.vimeo.com/video/${id}` : "";
+    }
+
+    if (url.hostname === "player.vimeo.com" && url.pathname.startsWith("/video/")) {
+      return `https://player.vimeo.com${url.pathname}`;
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function isDirectVideoUrl(value: string) {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return (url.protocol === "https:" || url.protocol === "http:") && /\.(mp4|webm|ogg)$/i.test(url.pathname);
+  } catch {
+    return value.startsWith("/api/media/") && /\.(mp4|webm|ogg)$/i.test(value);
+  }
 }
 
 function getReadingTime(content: string) {

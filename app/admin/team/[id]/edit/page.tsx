@@ -19,7 +19,7 @@ export default async function EditTeamMemberPage({ params }: { params: Promise<{
   if (!member) notFound();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="team.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.editEmployee")}</h1>
         <Link className="button secondary" href="/admin/team">

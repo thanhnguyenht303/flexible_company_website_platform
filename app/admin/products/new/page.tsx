@@ -7,7 +7,7 @@ export default async function NewProductPage() {
   const { t } = await getServerTranslations();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="products.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.newProduct")}</h1>
         <Link className="button secondary" href="/admin/products">

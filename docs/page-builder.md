@@ -1,11 +1,12 @@
 # Visual Page Builder
 
-The visual page builder lets admins edit visual pages with configurable blocks instead of code. The current admin UI links the builder for the homepage.
+The visual page builder lets admins edit supported visual pages with configurable blocks instead of code. Current supported page slugs are `home` and `about`.
 
 ## Admin Route
 
 ```text
 /admin/page-builder/home
+/admin/page-builder/about
 ```
 
 The builder is also linked from:
@@ -14,7 +15,7 @@ The builder is also linked from:
 /admin/pages
 ```
 
-Signed-in admins with `site.settings.update` permission also see an `Edit page` shortcut on the public homepage.
+Signed-in admins with `pages.manage` authority can open supported builder pages from the admin pages area.
 
 ## API Routes
 
@@ -23,7 +24,7 @@ PUT  /api/admin/page-builder/<page-slug>
 POST /api/admin/page-builder/<page-slug>/images
 ```
 
-Both routes require `site.settings.update`.
+Both routes require `pages.manage`.
 
 ## Supported Blocks
 
@@ -31,7 +32,10 @@ Both routes require `site.settings.update`.
 - Text
 - Image
 - Button
+- Video
+- Gallery
 - Banner
+- Static
 - Cards
 - Two-column layout
 - Divider
@@ -46,6 +50,8 @@ Both routes require `site.settings.update`.
 Team, services, and blog blocks render dynamic published/visible content from the database. They support normal or infinite scrolling, direction controls, optional carousel arrows, auto-scroll speed, and title links.
 
 Form blocks embed a published form from the form builder and submit through `/api/public/forms/<slug>/submissions`. Q&A blocks render published Q&A items with optional category filtering and item limits.
+
+The `about` page has a stricter block policy. It allows `hero`, `text`, `image`, `banner`, `button`, `video`, `gallery`, `spacer`, `divider`, and `static` blocks. Blocks outside that list are filtered for the About builder.
 
 ## Editing Controls
 
@@ -70,7 +76,7 @@ Blocks can be added from the left panel, reordered by dragging, selected on the 
 }
 ```
 
-Drafts are stored in `PageBuilderDraft` and do not replace the live homepage.
+Drafts are stored in `PageBuilderDraft` and do not replace the live page.
 
 `Publish` sends the same shape with:
 
@@ -97,3 +103,10 @@ The database stores media metadata in `MediaAsset`; public rendering uses:
 ```
 
 Accepted builder image files are JPG, PNG, and WEBP. Upload size is controlled by `MAX_UPLOAD_MB`.
+
+## Maintenance Notes
+
+- Add new supported page slugs in `modules/page-builder/page-builder.policy.ts`.
+- Add any page-specific block restrictions in the same policy file.
+- Update `BuilderBlockType` and the visual builder UI together when adding a new block type.
+- Document new block behavior here and in [API](api.md).

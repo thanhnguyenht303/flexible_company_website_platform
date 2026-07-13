@@ -30,7 +30,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
   if (!data) notFound();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="services.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.editService")}</h1>
         <Link className="button secondary" href="/admin/services">

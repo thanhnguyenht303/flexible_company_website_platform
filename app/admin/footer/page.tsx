@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { FooterThemeSettingsForm } from "@/components/admin/FooterThemeSettingsForm";
 import { FooterPartnerTableActions } from "@/components/admin/FooterPartnerTableActions";
 import { prisma } from "@/lib/db";
+import { getFooterThemeFromSite } from "@/lib/footer-theme";
 import { getServerTranslations } from "@/lib/i18n/server";
 
 async function getFooterPartners() {
@@ -15,27 +17,33 @@ async function getFooterPartners() {
 }
 
 export default async function AdminFooterPage() {
-  const [partners, { t }] = await Promise.all([getFooterPartners(), getServerTranslations()]);
+  const [partners, site, { t }] = await Promise.all([
+    getFooterPartners(),
+    prisma.siteSetting.findFirst({ select: { defaultSeo: true } }),
+    getServerTranslations()
+  ]);
+  const footerTheme = getFooterThemeFromSite(site ?? {});
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="footer.manage">
       <div className="admin-page-header">
         <h1>{t("admin.common.footer")}</h1>
         <Link className="button" href="/admin/footer/new">
           {t("admin.common.new")}
         </Link>
       </div>
+      <FooterThemeSettingsForm theme={footerTheme} />
       <div className="admin-panel">
         <h2>{t("admin.common.collaboratingCompanies")}</h2>
         <table className="table">
           <thead>
             <tr>
-              <th>{t("admin.common.logo")}</th>
-              <th>{t("admin.common.company")}</th>
-              <th>{t("admin.common.website")}</th>
-              <th>{t("admin.common.sort")}</th>
-              <th>{t("admin.common.visible")}</th>
-              <th>{t("admin.common.actions")}</th>
+              <th scope="col">{t("admin.common.logo")}</th>
+              <th scope="col">{t("admin.common.company")}</th>
+              <th scope="col">{t("admin.common.website")}</th>
+              <th scope="col">{t("admin.common.sort")}</th>
+              <th scope="col">{t("admin.common.visible")}</th>
+              <th scope="col">{t("admin.common.actions")}</th>
             </tr>
           </thead>
           <tbody>

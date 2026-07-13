@@ -4,7 +4,7 @@ Modules live under `modules/` and should own behavior that belongs to a business
 
 - Validation schemas.
 - Data services.
-- Permission names.
+- Authority keys.
 - Shared types.
 - Module-specific UI components.
 - Module-specific README notes.
@@ -18,7 +18,9 @@ modules/
   blog/
   careers/
   company-profile/
+  email/
   footer/
+  forms/
   inquiries/
   media/
   page-builder/
@@ -84,14 +86,17 @@ bio / bioVi
 
 Use helpers in `lib/i18n/content.ts` for English fallback behavior.
 
-## Permissions
+## Authorities
 
-Add new permission names to `lib/permissions.ts`. Existing permissions include:
+Add new admin authority names to `config/admin-authorities.ts`, then protect pages/routes with helpers from `lib/auth.ts` and `lib/permissions.ts`. Current authorities include:
 
 ```text
-site.settings.update
-theme.update
+dashboard.view
+siteSettings.manage
+theme.manage
+pages.manage
 users.manage
+roles.manage
 products.manage
 services.manage
 posts.manage
@@ -100,10 +105,13 @@ footer.manage
 careers.manage
 media.manage
 inquiries.manage
-audit.view
+forms.manage
+leads.manage
+qa.manage
+email.manage
 ```
 
-The Super Admin role uses `{ all: true }`.
+Legacy aliases map `site.settings.update` to `siteSettings.manage` and `theme.update` to `theme.manage`. Use current authority keys for new work. Super Admin bypasses individual authority checks.
 
 ## Storage
 
@@ -120,4 +128,8 @@ page-builder
 general
 ```
 
-Use `FILE_STORAGE_ROOT` and `saveResumeFile()` for private resume uploads. Private files should be served only through permission-protected API routes.
+Use `FILE_STORAGE_ROOT` and private file helpers for resume and form uploads. Private files should be served only through permission-protected API routes.
+
+## Documentation
+
+Any module change that adds or changes routes, environment variables, permissions/authorities, storage behavior, public pages, admin workflows, email variables, or deployment steps must update the relevant file in `docs/` in the same change.

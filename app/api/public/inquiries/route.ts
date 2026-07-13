@@ -2,6 +2,8 @@ import { fail, ok, validationFail } from "@/lib/api-response";
 import { prisma } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { contactInquirySchema } from "@/lib/validation";
+import { env } from "@/lib/env";
+import { sendAdminNotification } from "@/modules/email/email.service";
 
 export async function POST(request: Request) {
   const rateLimit = checkRateLimit({
@@ -29,6 +31,22 @@ export async function POST(request: Request) {
       sourceId: parsed.data.sourceId || null
     }
   });
+
+  await sendAdminNotification({
+    templateKey: "contact.message.received",
+    subject: `New contact message from ${inquiry.name}`,
+    body: `Name: ${inquiry.name}\nEmail: ${inquiry.email}\nPhone: ${inquiry.phone || "Not provided"}\n\n${inquiry.message}\n\nReview: ${env.NEXT_PUBLIC_SITE_URL}/admin/inquiries/${inquiry.id}`,
+    variables: {
+      senderName: inquiry.name,
+      senderEmail: inquiry.email,
+      senderPhone: inquiry.phone || "Not provided",
+      message: inquiry.message,
+      adminLink: `${env.NEXT_PUBLIC_SITE_URL}/admin/inquiries/${inquiry.id}`
+    },
+    replyTo: inquiry.email,
+    relatedType: "inquiry",
+    relatedId: inquiry.id
+  }).catch((error) => console.warn("Inquiry notification failed.", error));
 
   return ok({ id: inquiry.id }, { status: 201 });
 }

@@ -5,11 +5,13 @@ import { env } from "@/lib/env";
 import { saveEntityImage } from "@/lib/image-storage";
 import { hasPermission } from "@/lib/permissions";
 import { rejectOversizedRequest } from "@/lib/request-size";
+import { isSupportedBuilderPageSlug } from "@/modules/page-builder/page-builder.policy";
 
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireAdminUser();
-  if (!hasPermission(user, "site.settings.update")) return fail("FORBIDDEN", "Forbidden.", 403);
+  if (!hasPermission(user, "pages.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
+  if (!isSupportedBuilderPageSlug(slug)) return fail("NOT_FOUND", "This page cannot use the visual builder.", 404);
 
   const oversized = rejectOversizedRequest(request, env.MAX_UPLOAD_MB, "Page image upload");
   if (oversized) return oversized;

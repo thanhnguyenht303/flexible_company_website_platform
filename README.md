@@ -1,13 +1,13 @@
 # Flexible Company Website Platform
 
-A reusable company website CMS built with Next.js App Router, TypeScript, Prisma, PostgreSQL, and Docker Compose. It includes public marketing pages, bilingual content fields, an authenticated admin area, content modules, visual homepage editing, custom forms, lead workflows, Q&A publishing, media/file storage, inquiries, and deployment scripts.
+A reusable company website CMS built with Next.js App Router, TypeScript, Prisma, PostgreSQL, and Docker Compose. It includes public marketing pages, bilingual content fields, an authenticated admin area, content modules, visual Home/About page editing, custom forms, lead workflows, Q&A publishing, media/file storage, inquiries, and deployment scripts.
 
 ## Feature Overview
 
 - Public pages for home, about, services, products, team, careers, blog, Q&A, contact, custom forms, and privacy.
 - English/Vietnamese UI switching with localized content fields for products, services, posts, and team members.
-- Admin dashboard for site settings, theme settings, page visibility, visual page builder, services, products, posts, careers, forms, leads, Q&A, team, footer partners, media, inquiries, and users.
-- Visual homepage builder with draft/publish workflow, uploaded builder images, layout/style controls, and dynamic team/services/blog/form/Q&A blocks.
+- Admin dashboard for site settings, theme settings, page visibility, visual page builder, services, products, posts, careers, forms, leads, Q&A, team, footer partners, media, inquiries, Email Center, users, and roles.
+- Visual Home/About page builder with draft/publish workflow, uploaded builder images, layout/style controls, page-specific block policies, and dynamic team/services/blog/form/Q&A blocks.
 - Products, services, and blog posts with draft/published/archived status, optional Vietnamese content, slug generation, SEO fields, and image support.
 - Product and service galleries stored in an external image library and served through `/api/media/:id`.
 - Team profiles with ordering, visibility controls, photos, and localized role/bio fields.
@@ -18,7 +18,8 @@ A reusable company website CMS built with Next.js App Router, TypeScript, Prisma
 - Lead workflow views for qualifying form submissions, setting priority/status, follow-up dates, notes, and CSV exports.
 - Public Q&A pages with admin moderation/publishing and an "Ask a Question" form seeded by default.
 - Public service reviews with required name/email, rating, and comment. Submitted reviews are hidden by default for moderation; emails are stored but not displayed publicly.
-- Role/permission model with Super Admin bootstrap, bcrypt password hashing, secure session cookies, rate limits, upload limits, and security headers.
+- Role/authority model with Super Admin bootstrap, delegated role assignment rules, bcrypt password hashing, secure session cookies, rate limits, upload limits, CSRF checks for admin mutations, and security headers.
+- Email Center with encrypted SMTP/IMAP settings, templates, registered/custom variables, inbox sync, sent/log views, and workflow email actions.
 - Docker Compose stack for PostgreSQL, the Next.js app, and Nginx.
 - Developer docs, setup scripts, seed data, database backup/restore scripts, and Vitest validation tests.
 
@@ -84,11 +85,11 @@ app/                 Next.js App Router public pages, admin pages, and API route
 components/          Public, admin, and shared React components
 config/              Default site/theme/page/module configuration
 lib/                 Auth, database, validation, storage, permissions, SEO, i18n, rate-limit helpers
-modules/             Feature-owned validation, services, permissions, types, and module notes
+modules/             Feature-owned validation, services, authorities, types, and module notes
 prisma/              Prisma schema, migrations, and seed script
 scripts/             Setup, admin bootstrap, database backup, database restore
 docker/              Nginx and container support files
-docs/                Setup, deployment, API, storage, page-builder, and module development notes
+docs/                Setup, deployment, API, architecture, admin, storage, workflow, design, and module development notes
 public/uploads/      Legacy/local upload placeholder, ignored by git except .gitkeep
 ```
 
@@ -107,10 +108,20 @@ pnpm restore:db backups/db_YYYYMMDD_HHMMSS.sql
 
 ## Documentation
 
+- [Documentation Index](docs/index.md)
 - [Setup](docs/setup.md)
 - [Deployment](docs/deployment.md)
+- [Architecture](docs/architecture.md)
 - [API](docs/api.md)
+- [Admin Dashboard](docs/admin-dashboard.md)
+- [Roles and Authorities](docs/roles-authorities.md)
+- [Email Center](docs/email-center.md)
+- [Forms, Leads, and Q&A](docs/forms-leads-qa.md)
+- [Visual Page Builder](docs/page-builder.md)
+- [i18n](docs/i18n.md)
+- [Responsive Design](docs/responsive-design.md)
+- [Theme and Colors](docs/theme-and-colors.md)
 - [Image Storage](docs/image-storage.md)
 - [File Storage](docs/file-storage.md)
-- [Visual Page Builder](docs/page-builder.md)
 - [Module Development](docs/module-development.md)
+- [Troubleshooting](docs/troubleshooting.md)

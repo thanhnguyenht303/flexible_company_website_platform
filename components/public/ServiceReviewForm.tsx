@@ -74,7 +74,7 @@ export function ServiceReviewForm({ serviceSlug }: { serviceSlug: string }) {
         {state.status === "submitting" ? t("common.posting") : t("forms.review.postReview")}
       </button>
       {state.message ? (
-        <p className={`message ${state.status === "error" ? "error" : ""}`}>{state.message}</p>
+        <p className={`message ${state.status === "error" ? "error" : ""}`} role={state.status === "error" ? "alert" : "status"} aria-live={state.status === "error" ? "assertive" : "polite"}>{state.message}</p>
       ) : null}
     </form>
   );

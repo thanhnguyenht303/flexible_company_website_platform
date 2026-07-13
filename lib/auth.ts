@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { UserStatus } from "@prisma/client";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
+import type { AuthorityKey } from "@/config/admin-authorities";
+import { hasAuthority } from "@/lib/permissions";
 
 const encoder = new TextEncoder();
 
@@ -108,7 +110,11 @@ export async function getAdminUser() {
       status: UserStatus.ACTIVE
     },
     include: {
-      role: true
+      role: {
+        include: {
+          authorities: { include: { authority: true } }
+        }
+      }
     }
   });
 }
@@ -116,5 +122,11 @@ export async function getAdminUser() {
 export async function requireAdminUser() {
   const user = await getAdminUser();
   if (!user) redirect("/admin/login");
+  return user;
+}
+
+export async function requireAdminAuthority(authorityKey: AuthorityKey) {
+  const user = await requireAdminUser();
+  if (!hasAuthority(user, authorityKey)) redirect("/admin/forbidden");
   return user;
 }

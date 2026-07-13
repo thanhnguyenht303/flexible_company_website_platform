@@ -1,10 +1,10 @@
 export const defaultTheme = {
   primaryColor: "#2563EB",
   secondaryColor: "#1E293B",
-  accentColor: "#F97316",
-  backgroundColor: "#FFFFFF",
+  accentColor: "#EA580C",
+  backgroundColor: "#F8FAFC",
   backgroundImageId: null,
-  textColor: "#111827",
+  textColor: "#0F172A",
   fontFamily: "Inter",
   borderRadius: "medium",
   headerLayout: "classic",

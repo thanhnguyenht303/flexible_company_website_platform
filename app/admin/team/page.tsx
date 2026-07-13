@@ -17,7 +17,7 @@ export default async function AdminTeamPage() {
   const [team, { language, t }] = await Promise.all([getTeam(), getServerTranslations()]);
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="team.manage">
       <div className="admin-page-header">
         <h1>{t("admin.common.team")}</h1>
         <Link className="button" href="/admin/team/new">
@@ -28,13 +28,13 @@ export default async function AdminTeamPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>{t("admin.common.image")}</th>
-              <th>{t("admin.common.name")}</th>
-              <th>{t("admin.common.position")}</th>
-              <th>{t("admin.common.description")}</th>
-              <th>{t("admin.common.sort")}</th>
-              <th>{t("admin.common.visible")}</th>
-              <th>{t("admin.common.actions")}</th>
+              <th scope="col">{t("admin.common.image")}</th>
+              <th scope="col">{t("admin.common.name")}</th>
+              <th scope="col">{t("admin.common.position")}</th>
+              <th scope="col">{t("admin.common.description")}</th>
+              <th scope="col">{t("admin.common.sort")}</th>
+              <th scope="col">{t("admin.common.visible")}</th>
+              <th scope="col">{t("admin.common.actions")}</th>
             </tr>
           </thead>
           <tbody>

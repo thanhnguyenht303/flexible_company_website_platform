@@ -13,7 +13,11 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
     canvasY: 40,
     canvasWidth: 84,
     canvasHeight: 260,
-    minHeight: 0
+    minHeight: 0,
+    titleBodyGap: 16,
+    bodyButtonGap: 24,
+    gap: 16,
+    padding: 24
   };
 
   switch (type) {
@@ -27,6 +31,11 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         align: "center",
         width: "wide",
         paddingY: 96,
+        padding: 48,
+        titleBodyGap: 16,
+        bodyButtonGap: 24,
+        buttonSize: "large",
+        buttonVariant: "solid",
         minHeight: 520,
         borderRadius: 16,
         shadow: "soft"
@@ -37,6 +46,13 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         title: "Section heading",
         text: "Add paragraph content here.",
         fontSize: 18,
+        padding: 24,
+        titleBodyGap: 16,
+        paragraphSpacing: 14,
+        textStyle: {
+          title: { fontSize: 40, fontWeight: 750, lineHeight: 1.12 },
+          body: { fontSize: 18, fontWeight: 400, lineHeight: 1.6 }
+        },
         borderRadius: 0,
         shadow: "none"
       };
@@ -52,6 +68,31 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         shadow: "medium",
         hoverEffect: true
       };
+    case "video":
+      return {
+        ...base,
+        title: "Video",
+        text: "Add a YouTube, Vimeo, or direct video URL.",
+        videoUrl: "",
+        align: "center",
+        width: "wide",
+        canvasHeight: 360,
+        borderRadius: 12,
+        shadow: "medium"
+      };
+    case "gallery":
+      return {
+        ...base,
+        title: "Gallery",
+        imageAlt: "Gallery image",
+        galleryImageIds: [],
+        galleryLayout: "grid",
+        width: "wide",
+        canvasHeight: 420,
+        borderRadius: 12,
+        shadow: "soft",
+        hoverEffect: true
+      };
     case "button":
       return {
         ...base,
@@ -60,6 +101,17 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         align: "center",
         background: "#2563eb",
         color: "#ffffff",
+        buttonBackgroundColor: "#2563eb",
+        buttonTextColor: "#ffffff",
+        buttonBorderColor: "transparent",
+        buttonSize: "medium",
+        buttonVariant: "solid",
+        buttonHoverBackground: "#1d4ed8",
+        buttonHoverColor: "#ffffff",
+        buttonHoverBorderColor: "transparent",
+        textStyle: {
+          title: { fontSize: 16, fontWeight: 800, lineHeight: 1.1 }
+        },
         borderRadius: 999,
         shadow: "medium",
         hoverEffect: true
@@ -71,7 +123,23 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         text: "Share a company update, offer, or important message.",
         background: "#eef2ff",
         align: "center",
+        padding: 32,
+        titleBodyGap: 14,
         borderRadius: 14,
+        shadow: "soft"
+      };
+    case "static":
+      return {
+        ...base,
+        title: "Company value",
+        text: "Use this static content block for mission statements, values, milestones, or other About page content.",
+        background: "#f8fafc",
+        titleBodyGap: 14,
+        textStyle: {
+          title: { fontSize: 30, fontWeight: 750, lineHeight: 1.15 },
+          body: { fontSize: 17, fontWeight: 400, lineHeight: 1.6 }
+        },
+        borderRadius: 12,
         shadow: "soft"
       };
     case "cards":
@@ -118,6 +186,10 @@ export function createBuilderBlock(type: BuilderBlockType): BuilderBlock {
         buttonUrl: "/contact",
         align: "center",
         background: "#f8fafc",
+        titleBodyGap: 14,
+        bodyButtonGap: 22,
+        buttonSize: "medium",
+        buttonVariant: "solid",
         borderRadius: 14,
         shadow: "soft"
       };

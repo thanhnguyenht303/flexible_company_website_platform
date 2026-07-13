@@ -40,6 +40,9 @@ Images/
   team/
   logos/
   theme-backgrounds/
+    site/
+    careers/
+    qa/
   page-builder/
   general/
 ```
@@ -52,7 +55,9 @@ Current behavior:
 - Team photos are saved in `Images/team/<team-member-id>/`.
 - Footer collaborator logos are saved in `Images/logos/<footer-partner-id>/`.
 - Site logos are saved in `Images/logos/site/`.
-- Theme background images are saved in `Images/theme-backgrounds/site/`.
+- Global theme background images are saved in `Images/theme-backgrounds/site/`.
+- Career page background images are saved in `Images/theme-backgrounds/careers/`.
+- Q&A page background images are saved in `Images/theme-backgrounds/qa/`.
 - Visual page-builder uploads are saved in `Images/page-builder/<page-slug>/`.
 - Shared or uncategorized uploads can use `Images/general/` in future features.
 
@@ -68,6 +73,9 @@ New-Item -ItemType Directory -Force `
   ..\Images\team, `
   ..\Images\logos, `
   ..\Images\theme-backgrounds, `
+  ..\Images\theme-backgrounds\site, `
+  ..\Images\theme-backgrounds\careers, `
+  ..\Images\theme-backgrounds\qa, `
   ..\Images\page-builder, `
   ..\Images\general
 ```
@@ -145,14 +153,14 @@ Site settings can upload a logo:
 4. The site settings row stores the media id in `logoId`.
 5. Replacing the logo deletes the old `logos/site/` asset when it belongs to that folder.
 
-### Theme Background
+### Theme Backgrounds
 
-Theme settings can upload or remove a background image:
+Global, career, and Q&A theme settings can upload or remove background images:
 
-1. The image is sent to `/api/admin/settings/theme` as `backgroundImage`.
-2. The file is saved under `Images/theme-backgrounds/site/`.
+1. The image is sent to `/api/admin/settings/theme`, `/api/admin/careers/theme`, or `/api/admin/qa/theme` as `backgroundImage`.
+2. The file is saved under `Images/theme-backgrounds/site/`, `Images/theme-backgrounds/careers/`, or `Images/theme-backgrounds/qa/`.
 3. A `MediaAsset` record is created.
-4. The theme settings row stores the media id in `backgroundImageId`.
+4. The theme settings or section theme object stores the media id in `backgroundImageId`.
 5. Sending `removeBackgroundImage=true` removes the current background image.
 
 ### Footer Collaborator Logos

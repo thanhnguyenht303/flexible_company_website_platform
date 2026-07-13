@@ -8,14 +8,17 @@ import { getServerTranslations } from "@/lib/i18n/server";
 export const dynamic = "force-dynamic";
 
 async function getPosts() {
-  return prisma.post.findMany({ orderBy: { createdAt: "desc" } });
+  return prisma.post.findMany({
+    include: { author: { select: { displayName: true, username: true } } },
+    orderBy: { updatedAt: "desc" }
+  });
 }
 
 export default async function AdminPostsPage() {
   const [posts, { language, t }] = await Promise.all([getPosts(), getServerTranslations()]);
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="posts.manage">
       <div className="admin-page-header">
         <h1>{t("admin.common.articles")}</h1>
         <Link className="button" href="/admin/posts/new">
@@ -26,12 +29,12 @@ export default async function AdminPostsPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>{t("admin.common.image")}</th>
-              <th>{t("admin.common.title")}</th>
-              <th>{t("admin.common.slug")}</th>
-              <th>{t("admin.common.status")}</th>
-              <th>{t("admin.common.published")}</th>
-              <th>{t("admin.common.actions")}</th>
+              <th scope="col">{t("admin.common.image")}</th>
+              <th scope="col">{t("admin.common.title")}</th>
+              <th scope="col">{t("admin.common.slug")}</th>
+              <th scope="col">{t("admin.common.status")}</th>
+              <th scope="col">{language === "vi" ? "Tác giả / Cập nhật" : "Author / Updated"}</th>
+              <th scope="col">{t("admin.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -43,7 +46,7 @@ export default async function AdminPostsPage() {
                     {post.featuredImageId ? (
                       <div className="table-thumb">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/media/${post.featuredImageId}`} alt="" />
+                        <img src={`/api/media/${post.featuredImageId}`} alt={post.featuredImageAlt || title} />
                       </div>
                     ) : (
                       t("admin.common.none")
@@ -52,9 +55,12 @@ export default async function AdminPostsPage() {
                   <td>{title}</td>
                   <td>{post.slug}</td>
                   <td>
-                    <span className="badge">{t(`admin.status.${post.status}`)}</span>
+                    <span className={`badge status-${post.status.toLowerCase()}`}>{formatPostStatus(post.status, language)}</span>
                   </td>
-                  <td>{post.publishedAt ? post.publishedAt.toLocaleDateString() : t("admin.common.notPublished")}</td>
+                  <td>
+                    <strong>{post.author?.displayName || post.author?.username || (language === "vi" ? "Quản trị viên" : "Administrator")}</strong>
+                    <small className="table-secondary-line">{post.updatedAt.toLocaleDateString(language === "vi" ? "vi-VN" : "en")}</small>
+                  </td>
                   <td>
                     <PostTableActions id={post.id} slug={post.slug} title={title} status={post.status} />
                   </td>
@@ -71,4 +77,15 @@ export default async function AdminPostsPage() {
       </div>
     </AdminShell>
   );
+}
+
+function formatPostStatus(status: string, language: string) {
+  const labels: Record<string, [string, string]> = {
+    DRAFT: ["Draft", "Bản nháp"],
+    SCHEDULED: ["Scheduled", "Đã lên lịch"],
+    PUBLISHED: ["Published", "Đã xuất bản"],
+    UNLISTED: ["Unlisted", "Không liệt kê"],
+    ARCHIVED: ["Archived", "Đã lưu trữ"]
+  };
+  return labels[status]?.[language === "vi" ? 1 : 0] ?? status;
 }

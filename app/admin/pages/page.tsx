@@ -13,7 +13,7 @@ export default async function AdminPagesPage() {
   ]);
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="pages.manage">
       <div className="admin-page-header">
         <h1>{t("admin.common.pages")}</h1>
       </div>
@@ -28,6 +28,12 @@ export default async function AdminPagesPage() {
           <Link className="button secondary" href="/">
             {t("admin.common.viewHomepage")}
           </Link>
+          <Link className="button" href="/admin/page-builder/about">
+            {t("admin.common.editAboutPage")}
+          </Link>
+          <Link className="button secondary" href="/about">
+            {t("admin.common.viewAboutPage")}
+          </Link>
         </div>
       </div>
       <div className="admin-panel">
@@ -35,9 +41,9 @@ export default async function AdminPagesPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>{t("admin.common.order")}</th>
-              <th>{t("admin.common.type")}</th>
-              <th>{t("admin.common.visible")}</th>
+              <th scope="col">{t("admin.common.order")}</th>
+              <th scope="col">{t("admin.common.type")}</th>
+              <th scope="col">{t("admin.common.visible")}</th>
             </tr>
           </thead>
           <tbody>

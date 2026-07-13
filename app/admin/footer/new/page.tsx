@@ -7,7 +7,7 @@ export default async function NewFooterPartnerPage() {
   const { t } = await getServerTranslations();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="footer.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.newFooterCollaborator")}</h1>
         <Link className="button secondary" href="/admin/footer">

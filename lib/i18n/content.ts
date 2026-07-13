@@ -1,4 +1,5 @@
 import { type Language } from "@/lib/i18n/translations";
+import { articleDocumentToText, normalizeArticleDocument } from "@/modules/blog/article-document";
 
 type ContentRecord = object;
 
@@ -37,11 +38,19 @@ export function localizeProduct<T extends ContentRecord>(product: T, language: L
 }
 
 export function localizePost<T extends ContentRecord>(post: T, language: Language) {
+  const record = post as Record<string, unknown>;
+  const englishDocument = normalizeArticleDocument(record.contentJson);
+  const vietnameseDocument = normalizeArticleDocument(record.contentJsonVi);
+  const localizedDocument = language === "vi" && articleDocumentToText(vietnameseDocument)
+    ? vietnameseDocument
+    : englishDocument;
+
   return {
     ...post,
     title: localizedField(post, "title", language),
     excerpt: localizedField(post, "excerpt", language),
-    content: localizedField(post, "content", language)
+    content: localizedField(post, "content", language),
+    contentJson: localizedDocument
   };
 }
 

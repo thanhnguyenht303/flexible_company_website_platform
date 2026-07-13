@@ -7,7 +7,7 @@ export default async function NewServicePage() {
   const { t } = await getServerTranslations();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="services.manage">
       <div className="admin-page-header">
         <h1>{t("admin.pageTitles.newService")}</h1>
         <Link className="button secondary" href="/admin/services">

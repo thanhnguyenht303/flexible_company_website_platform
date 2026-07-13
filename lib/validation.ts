@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSafeCssColor } from "./css-color";
 import { isSafePublicUrl } from "./safe-url";
 
 const customCssSchema = z
@@ -43,11 +44,11 @@ export const siteSettingsSchema = z.object({
 });
 
 export const themeSettingsSchema = z.object({
-  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  backgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  textColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  primaryColor: z.string().refine((value) => isSafeCssColor(value, { allowInherited: false }), "Enter a valid CSS color."),
+  secondaryColor: z.string().refine((value) => isSafeCssColor(value, { allowInherited: false }), "Enter a valid CSS color."),
+  accentColor: z.string().refine((value) => isSafeCssColor(value, { allowInherited: false }), "Enter a valid CSS color."),
+  backgroundColor: z.string().refine((value) => isSafeCssColor(value, { allowInherited: false }), "Enter a valid CSS color."),
+  textColor: z.string().refine((value) => isSafeCssColor(value, { allowInherited: false }), "Enter a valid CSS color."),
   fontFamily: z.string().min(2).max(80),
   borderRadius: z.enum(["none", "small", "medium", "large"]),
   headerLayout: z.string().min(2).max(60),

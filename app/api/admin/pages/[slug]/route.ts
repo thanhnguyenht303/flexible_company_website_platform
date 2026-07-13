@@ -14,7 +14,7 @@ const pageVisibilitySchema = z.object({
 export async function PATCH(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireAdminUser();
-  if (!hasPermission(user, "site.settings.update")) return fail("FORBIDDEN", "Forbidden.", 403);
+  if (!hasPermission(user, "pages.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
 
   const pageConfig = getPublicPage(slug);
   if (!pageConfig) return fail("NOT_FOUND", "This public page is not configurable.", 404);

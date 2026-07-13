@@ -14,7 +14,7 @@ export default async function EditQaPage({ params }: { params: Promise<{ id: str
   if (!item) notFound();
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="qa.manage">
       <div className="admin-page-header">
         <div>
           <h1>{t("formsFeature.qa.editQa")}</h1>

@@ -3,7 +3,10 @@ export type BuilderBlockType =
   | "text"
   | "image"
   | "button"
+  | "video"
+  | "gallery"
   | "banner"
+  | "static"
   | "cards"
   | "twoColumn"
   | "divider"
@@ -23,6 +26,8 @@ export type BuilderImageFit = "cover" | "contain" | "fill";
 export type BuilderScrollMode = "none" | "normal" | "infinite";
 export type BuilderScrollDirection = "horizontal" | "vertical";
 export type BuilderShadow = "none" | "soft" | "medium" | "strong";
+export type BuilderButtonSize = "small" | "medium" | "large";
+export type BuilderButtonVariant = "solid" | "outline" | "ghost";
 
 export type BuilderTextElementStyle = {
   fontFamily?: string;
@@ -46,6 +51,8 @@ export type BuilderCard = {
   href?: string;
 };
 
+export type BuilderGalleryLayout = "grid" | "mosaic" | "strip";
+
 export type BuilderBlock = {
   id: string;
   type: BuilderBlockType;
@@ -56,8 +63,22 @@ export type BuilderBlock = {
   quote?: string;
   buttonText?: string;
   buttonUrl?: string;
+  buttonOpenInNewTab?: boolean;
+  buttonSize?: BuilderButtonSize;
+  buttonVariant?: BuilderButtonVariant;
+  buttonBackgroundColor?: string;
+  buttonTextColor?: string;
+  buttonBorderColor?: string;
+  buttonHoverBackground?: string;
+  buttonHoverColor?: string;
+  buttonHoverBorderColor?: string;
+  buttonDisabledBackground?: string;
+  buttonDisabledColor?: string;
+  videoUrl?: string;
   imageId?: string;
   imageAlt?: string;
+  galleryImageIds?: string[];
+  galleryLayout?: BuilderGalleryLayout;
   href?: string;
   cards?: BuilderCard[];
   leftTitle?: string;
@@ -71,6 +92,7 @@ export type BuilderBlock = {
   background?: string;
   color?: string;
   borderColor?: string;
+  overlayColor?: string;
   borderRadius?: number;
   shadow?: BuilderShadow;
   opacity?: number;
@@ -83,6 +105,9 @@ export type BuilderBlock = {
   lineHeight?: number;
   letterSpacing?: number;
   paragraphSpacing?: number;
+  titleBodyGap?: number;
+  bodyButtonGap?: number;
+  overlayOpacity?: number;
   gap?: number;
   padding?: number;
   paddingY?: number;

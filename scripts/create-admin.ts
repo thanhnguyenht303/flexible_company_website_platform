@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import prompts from "prompts";
-import { superAdminPermissions } from "../lib/permissions";
+import { syncAuthorities } from "../lib/authority-sync";
 
 const prisma = new PrismaClient();
 const minPasswordLength = Number(process.env.PASSWORD_MIN_LENGTH ?? 10);
@@ -13,15 +13,7 @@ async function main() {
     );
   }
 
-  const superAdminRole = await prisma.role.upsert({
-    where: { name: "Super Admin" },
-    update: { permissions: superAdminPermissions },
-    create: {
-      name: "Super Admin",
-      description: "Full system access",
-      permissions: superAdminPermissions
-    }
-  });
+  const superAdminRole = await syncAuthorities(prisma);
 
   const existingAdmin = await prisma.user.findFirst({
     where: { roleId: superAdminRole.id }

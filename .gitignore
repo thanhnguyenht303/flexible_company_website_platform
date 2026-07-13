@@ -5,9 +5,18 @@
 /.pnp
 .pnp.js
 .pnpm-store/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/.nyc_output/
 
 # next.js
 /.next/
@@ -15,6 +24,7 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
@@ -26,6 +36,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.log
+*.log.*
+codex-dev-server*.log
+dev-server-*.log
+.codex-dev-server*.log
 
 # local env files
 .env*.local
@@ -44,11 +58,23 @@ next-env.d.ts
 # generated and local runtime data
 /public/uploads/*
 !/public/uploads/.gitkeep
+/Images/
 /files_storage/
 /backups/
 /certbot/
 /docker/certbot/
 /.tools/
+
+# local reports and one-off audit outputs
+/reports/
+/docs/*report*.md
+/docs/*Report*.md
+
+# local databases
+*.sqlite
+*.sqlite3
+*.db
+prisma/*.db
 
 # OS/editor
 .idea/

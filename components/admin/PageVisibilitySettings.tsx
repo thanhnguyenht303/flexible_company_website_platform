@@ -47,10 +47,10 @@ export function PageVisibilitySettings({ pages }: PageVisibilitySettingsProps) {
       <table className="table">
         <thead>
           <tr>
-            <th>{t("admin.common.page")}</th>
-            <th>{t("admin.common.path")}</th>
-            <th>{t("admin.common.status")}</th>
-            <th>{t("admin.common.action")}</th>
+            <th scope="col">{t("admin.common.page")}</th>
+            <th scope="col">{t("admin.common.path")}</th>
+            <th scope="col">{t("admin.common.status")}</th>
+            <th scope="col">{t("admin.common.action")}</th>
           </tr>
         </thead>
         <tbody>

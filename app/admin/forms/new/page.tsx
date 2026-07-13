@@ -6,7 +6,7 @@ import { getServerTranslations } from "@/lib/i18n/server";
 export default async function NewFormPage() {
   const { t } = await getServerTranslations();
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="forms.manage">
       <div className="admin-page-header">
         <h1>{t("formsFeature.forms.newForm")}</h1>
         <Link className="button secondary" href="/admin/forms">

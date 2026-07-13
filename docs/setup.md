@@ -86,6 +86,9 @@ New-Item -ItemType Directory -Force `
   ..\Images\team, `
   ..\Images\logos, `
   ..\Images\theme-backgrounds, `
+  ..\Images\theme-backgrounds\site, `
+  ..\Images\theme-backgrounds\careers, `
+  ..\Images\theme-backgrounds\qa, `
   ..\Images\page-builder, `
   ..\Images\general, `
   ..\files_storage\job-applications, `
@@ -104,7 +107,7 @@ pnpm setup:admin
 The script:
 
 - Requires `ALLOW_ADMIN_BOOTSTRAP=true`.
-- Creates or updates the `Super Admin` role with `{ all: true }` permissions.
+- Creates or updates the `Super Admin` role.
 - Refuses to create an extra Super Admin unless confirmed.
 - Enforces `PASSWORD_MIN_LENGTH` plus uppercase, lowercase, and numeric characters.
 - Hashes the password with bcrypt.
@@ -126,7 +129,22 @@ pnpm build
 
 Use `pnpm test` for fast validation helper coverage. Use `pnpm typecheck` and `pnpm build` before deployment or larger changes.
 
-`pnpm db:seed` also creates the default published `ask-a-question` form used by `/qa` and grants the Editor role forms, leads, and Q&A permissions.
+`pnpm db:seed` also syncs admin authorities, creates the default published `ask-a-question` form used by `/qa`, seeds default Email Center settings/templates, and grants the Editor role content-oriented authorities.
+
+## Email Center Setup
+
+For local development, SMTP can be configured later in `/admin/email/settings`. Environment SMTP values are fallback values only:
+
+```env
+MAIL_DRIVER=smtp
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=no-reply@your-domain.com
+```
+
+IMAP settings are managed from the admin Email Center and stored encrypted in the database.
 
 ## Common Issues
 
@@ -134,3 +152,5 @@ Use `pnpm test` for fast validation helper coverage. Use `pnpm typecheck` and `p
 - `APP_SECRET` validation errors in production mean the example secret is still present.
 - Upload failures often point to missing `../Images` or `../files_storage` folders, unsupported MIME types, or files larger than `MAX_UPLOAD_MB` / `MAX_FILE_UPLOAD_MB`.
 - Admin bootstrap failures are expected when `ALLOW_ADMIN_BOOTSTRAP=false`.
+- Forbidden admin pages usually mean the current user's role lacks the route authority. See [Roles and Authorities](roles-authorities.md).
+- Email send failures should be checked in `/admin/email/logs` after verifying SMTP settings and template variables.

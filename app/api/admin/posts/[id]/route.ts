@@ -1,42 +1,33 @@
 import { revalidatePath } from "next/cache";
-import { PublishStatus } from "@prisma/client";
-import { z } from "zod";
+import { PostStatus, Prisma } from "@prisma/client";
 import { fail, ok, validationFail } from "@/lib/api-response";
 import { requireAdminUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
-import { deleteEntityImageFolder, saveEntityImage } from "@/lib/image-storage";
+import { deleteEntityImageFolder } from "@/lib/image-storage";
 import { hasPermission } from "@/lib/permissions";
-import { rejectOversizedRequest } from "@/lib/request-size";
 import { slugify } from "@/lib/slug";
+import {
+  articleDocumentToText,
+  legacyArticleToDocument,
+  normalizeArticleDocument
+} from "@/modules/blog/article-document";
+import {
+  blogDraftSchema,
+  normalizeBlogPostInput,
+  validatePublishablePost
+} from "@/modules/blog/blog.validation";
 
-const updatePostSchema = z
-  .object({
-    title: z.string().min(2).max(180).optional(),
-    titleVi: z.string().max(180).optional().nullable(),
-    slug: z.string().max(220).optional(),
-    excerpt: z.string().max(320).optional().nullable(),
-    excerptVi: z.string().max(320).optional().nullable(),
-    content: z.string().min(20).optional(),
-    contentVi: z.string().optional().nullable(),
-    status: z.nativeEnum(PublishStatus).optional()
-  })
-  .refine((value) => Object.keys(value).length > 0, {
-    message: "At least one field is required."
-  });
-
-type Params = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
   const user = await requireAdminUser();
   if (!hasPermission(user, "posts.manage")) return fail("FORBIDDEN", "Forbidden.", 403);
 
-  const post = await prisma.post.findUnique({ where: { id } });
+  const post = await prisma.post.findUnique({
+    where: { id },
+    include: { author: { select: { displayName: true, username: true } } }
+  });
   if (!post) return fail("NOT_FOUND", "Post not found.", 404);
 
   return ok(post);
@@ -50,85 +41,172 @@ export async function PATCH(request: Request, { params }: Params) {
   const existing = await prisma.post.findUnique({ where: { id } });
   if (!existing) return fail("NOT_FOUND", "Post not found.", 404);
 
-  const oversized = rejectOversizedRequest(request, env.MAX_UPLOAD_MB, "Post upload");
-  if (oversized) return oversized;
-
-  const { fields, image, inlineImages } = await parsePostRequest(request);
-  const parsed = updatePostSchema.safeParse(fields);
+  const body = await request.json().catch(() => null);
+  const parsed = blogDraftSchema.partial().safeParse(body);
   if (!parsed.success) return validationFail(parsed.error);
+  if (!Object.keys(parsed.data).length) {
+    return fail("EMPTY_UPDATE", "At least one field is required.", 422);
+  }
 
-  const input = parsed.data;
-  const nextSlug =
-    input.slug && input.slug.trim().length > 0
-      ? slugify(input.slug)
-      : input.title
-        ? slugify(input.title)
-        : undefined;
+  if (parsed.data.revisionNumber !== undefined && parsed.data.revisionNumber !== existing.revisionNumber) {
+    return fail(
+      "EDIT_CONFLICT",
+      "This article was changed in another tab. Reload before saving again.",
+      409
+    );
+  }
 
-  if (nextSlug && nextSlug !== existing.slug) {
-    const slugOwner = await prisma.post.findUnique({ where: { slug: nextSlug } });
-    if (slugOwner) {
+  const input = normalizeBlogPostInput({
+    title: parsed.data.title ?? existing.title,
+    titleVi: parsed.data.titleVi ?? existing.titleVi,
+    slug: parsed.data.slug ?? existing.slug,
+    excerpt: parsed.data.excerpt ?? existing.excerpt,
+    excerptVi: parsed.data.excerptVi ?? existing.excerptVi,
+    content: parsed.data.content ?? existing.content,
+    contentVi: parsed.data.contentVi ?? existing.contentVi,
+    contentJson: parsed.data.contentJson !== undefined ? parsed.data.contentJson : existing.contentJson,
+    contentJsonVi: parsed.data.contentJsonVi !== undefined ? parsed.data.contentJsonVi : existing.contentJsonVi,
+    tagNames: parsed.data.tagNames ?? existing.tagNames,
+    featuredImageAlt: parsed.data.featuredImageAlt ?? existing.featuredImageAlt,
+    seoTitle: parsed.data.seoTitle ?? existing.seoTitle,
+    seoDescription: parsed.data.seoDescription ?? existing.seoDescription,
+    canonicalUrl: parsed.data.canonicalUrl ?? existing.canonicalUrl,
+    status: parsed.data.status ?? existing.status,
+    scheduledAt: parsed.data.scheduledAt ?? existing.scheduledAt?.toISOString(),
+    revisionNumber: parsed.data.revisionNumber,
+    createRevision: parsed.data.createRevision
+  });
+
+  if (parsed.data.contentJson != null && !input.contentJson) {
+    return fail("INVALID_DOCUMENT", "The article document contains unsupported content.", 422, {
+      contentJson: "The article document could not be saved."
+    });
+  }
+  if (parsed.data.contentJsonVi != null && !input.contentJsonVi) {
+    return fail("INVALID_DOCUMENT", "The Vietnamese article document contains unsupported content.", 422, {
+      contentJsonVi: "The translated document could not be saved."
+    });
+  }
+
+  const nextSlug = parsed.data.slug !== undefined
+    ? slugify(parsed.data.slug || input.title) || existing.slug
+    : parsed.data.title !== undefined && existing.slug.startsWith("untitled-story")
+      ? slugify(input.title) || existing.slug
+      : existing.slug;
+
+  if (nextSlug !== existing.slug) {
+    const owner = await prisma.post.findUnique({ where: { slug: nextSlug }, select: { id: true } });
+    if (owner && owner.id !== existing.id) {
       return fail("SLUG_EXISTS", "A post with this slug already exists.", 409, {
-        slug: "Slug must be unique."
+        slug: "Choose a different URL slug."
       });
     }
   }
 
-  const nextStatus = input.status ?? existing.status;
-  const shouldSetPublishedAt = nextStatus === PublishStatus.PUBLISHED && !existing.publishedAt;
-  const shouldClearPublishedAt = nextStatus !== PublishStatus.PUBLISHED;
+  const nextStatus = (parsed.data.status ?? existing.status) as PostStatus;
+  const nextDocument = input.contentJson ?? normalizeArticleDocument(existing.contentJson);
+  const nextContentText = articleDocumentToText(nextDocument) || input.content;
+  const nextScheduledAt = nextStatus === PostStatus.SCHEDULED && input.scheduledAt
+    ? new Date(input.scheduledAt)
+    : null;
 
-  const contentWithInlineImages =
-    input.content !== undefined
-      ? await saveInlinePostImages(id, input.title ?? existing.title, input.content, inlineImages, user.id)
-      : undefined;
-
-  let post = await prisma.post.update({
-    where: { id },
-    data: {
-      ...(input.title !== undefined ? { title: input.title } : {}),
-      ...(input.titleVi !== undefined ? { titleVi: input.titleVi || null } : {}),
-      ...(nextSlug ? { slug: nextSlug } : {}),
-      ...(input.excerpt !== undefined ? { excerpt: input.excerpt || null } : {}),
-      ...(input.excerptVi !== undefined ? { excerptVi: input.excerptVi || null } : {}),
-      ...(contentWithInlineImages !== undefined ? { content: contentWithInlineImages } : {}),
-      ...(input.contentVi !== undefined ? { contentVi: input.contentVi || null } : {}),
-      ...(input.status !== undefined ? { status: input.status } : {}),
-      ...(shouldSetPublishedAt ? { publishedAt: new Date() } : {}),
-      ...(shouldClearPublishedAt ? { publishedAt: null } : {})
-    }
+  const publishErrors = validatePublishablePost({
+    title: input.title,
+    content: nextContentText,
+    contentJson: nextDocument,
+    featuredImageId: existing.featuredImageId,
+    featuredImageAlt: input.featuredImageAlt,
+    status: nextStatus,
+    scheduledAt: nextScheduledAt
   });
 
-  if (image) {
-    const savedImage = await saveEntityImage({ entityType: "posts", entityId: post.id, file: image });
-    if (savedImage) {
-      const asset = await prisma.mediaAsset.create({
+  if (nextStatus !== PostStatus.DRAFT && nextStatus !== PostStatus.ARCHIVED && Object.keys(publishErrors).length) {
+    return fail("PUBLISH_VALIDATION", "Complete the publishing checklist.", 422, publishErrors);
+  }
+
+  const wasImmediatelyPublic = existing.status === PostStatus.PUBLISHED || existing.status === PostStatus.UNLISTED;
+  const isImmediatelyPublic = nextStatus === PostStatus.PUBLISHED || nextStatus === PostStatus.UNLISTED;
+  const publicationDate = isImmediatelyPublic ? existing.publishedAt ?? new Date() : null;
+  const firstPublicationDate = existing.firstPublishedAt ?? (isImmediatelyPublic ? publicationDate : nextScheduledAt);
+  const nextRevisionNumber = existing.revisionNumber + 1;
+  const shouldCreateRevision = Boolean(parsed.data.createRevision) || (!wasImmediatelyPublic && isImmediatelyPublic);
+
+  const post = await prisma.$transaction(async (transaction) => {
+    const updated = await transaction.post.update({
+      where: { id, revisionNumber: existing.revisionNumber },
+      data: {
+        title: input.title,
+        titleVi: input.titleVi?.trim() || null,
+        slug: nextSlug,
+        excerpt: input.excerpt?.trim() || null,
+        excerptVi: input.excerptVi?.trim() || null,
+        content: nextContentText,
+        contentVi: input.contentVi?.trim() || null,
+        ...(nextDocument ? { contentJson: nextDocument as Prisma.InputJsonValue } : {}),
+        ...(input.contentJsonVi ? { contentJsonVi: input.contentJsonVi as Prisma.InputJsonValue } : {}),
+        contentText: nextContentText,
+        tagNames: input.tagNames,
+        featuredImageAlt: input.featuredImageAlt?.trim() || null,
+        seoTitle: input.seoTitle?.trim() || null,
+        seoDescription: input.seoDescription?.trim() || null,
+        canonicalUrl: input.canonicalUrl?.trim() || null,
+        status: nextStatus,
+        scheduledAt: nextScheduledAt,
+        publishedAt: publicationDate,
+        firstPublishedAt: firstPublicationDate,
+        revisionNumber: nextRevisionNumber,
+        authorId: existing.authorId ?? user.id
+      },
+      include: { author: { select: { displayName: true, username: true } } }
+    });
+
+    if (shouldCreateRevision) {
+      const englishDocument = nextDocument ?? legacyArticleToDocument(nextContentText);
+      await transaction.postRevision.create({
         data: {
-          filename: savedImage.relativePath,
-          originalName: savedImage.originalName,
-          mimeType: savedImage.mimeType,
-          sizeBytes: savedImage.sizeBytes,
-          url: `/api/media/pending`,
-          altText: post.title,
-          uploadedById: user.id
+          postId: id,
+          locale: "en",
+          revisionNumber: nextRevisionNumber,
+          title: input.title,
+          excerpt: input.excerpt?.trim() || null,
+          contentJson: englishDocument as Prisma.InputJsonValue,
+          createdById: user.id
         }
       });
 
-      post = await prisma.post.update({
-        where: { id: post.id },
-        data: { featuredImageId: asset.id }
-      });
-
-      await prisma.mediaAsset.update({
-        where: { id: asset.id },
-        data: { url: `/api/media/${asset.id}` }
-      });
+      if (input.contentJsonVi) {
+        await transaction.postRevision.create({
+          data: {
+            postId: id,
+            locale: "vi",
+            revisionNumber: nextRevisionNumber,
+            title: input.titleVi?.trim() || input.title,
+            excerpt: input.excerptVi?.trim() || null,
+            contentJson: input.contentJsonVi as Prisma.InputJsonValue,
+            createdById: user.id
+          }
+        });
+      }
     }
+
+    return updated;
+  }).catch((error: unknown) => {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return null;
+    }
+    throw error;
+  });
+
+  if (!post) {
+    return fail(
+      "EDIT_CONFLICT",
+      "This article was changed in another tab. Reload before saving again.",
+      409
+    );
   }
 
   revalidatePostPaths(existing.slug);
   revalidatePostPaths(post.slug);
-
   return ok(post);
 }
 
@@ -141,13 +219,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (!existing) return fail("NOT_FOUND", "Post not found.", 404);
 
   await prisma.post.delete({ where: { id } });
-  await prisma.mediaAsset.deleteMany({
-    where: {
-      filename: {
-        startsWith: `posts/${id}/`
-      }
-    }
-  });
+  await prisma.mediaAsset.deleteMany({ where: { filename: { startsWith: `posts/${id}/` } } });
   await deleteEntityImageFolder("posts", id);
   revalidatePostPaths(existing.slug);
 
@@ -159,88 +231,4 @@ function revalidatePostPaths(slug: string) {
   revalidatePath("/blog");
   revalidatePath(`/blog/${slug}`);
   revalidatePath("/admin/posts");
-}
-
-async function parsePostRequest(request: Request) {
-  const contentType = request.headers.get("content-type") ?? "";
-
-  if (contentType.includes("multipart/form-data")) {
-    const formData = await request.formData();
-    const imageValue = formData.get("featuredImage");
-    const inlineFiles = formData
-      .getAll("inlineImages")
-      .filter((value): value is File => value instanceof File && value.size > 0);
-    const inlineTokens = formData
-      .getAll("inlineImageTokens")
-      .filter((value): value is string => typeof value === "string");
-    const inlineAltTexts = formData
-      .getAll("inlineImageAltTexts")
-      .filter((value): value is string => typeof value === "string");
-    const fields: Record<string, string> = {};
-
-    for (const field of ["title", "titleVi", "slug", "excerpt", "excerptVi", "content", "contentVi", "status"]) {
-      const value = formData.get(field);
-      if (typeof value === "string") {
-        fields[field] = value;
-      }
-    }
-
-    return {
-      fields,
-      image: imageValue instanceof File && imageValue.size > 0 ? imageValue : null,
-      inlineImages: inlineFiles.map((file, index) => ({
-        file,
-        token: inlineTokens[index] ?? "",
-        altText: inlineAltTexts[index] || "Article image"
-      }))
-    };
-  }
-
-  return {
-    fields: await request.json().catch(() => null),
-    image: null,
-    inlineImages: []
-  };
-}
-
-async function saveInlinePostImages(
-  postId: string,
-  postTitle: string,
-  content: string,
-  inlineImages: Array<{ file: File; token: string; altText: string }>,
-  userId: string
-) {
-  let nextContent = content;
-
-  for (const inlineImage of inlineImages) {
-    if (!inlineImage.token || !nextContent.includes(`post-image:${inlineImage.token}`)) continue;
-
-    const savedImage = await saveEntityImage({
-      entityType: "posts",
-      entityId: postId,
-      file: inlineImage.file
-    });
-    if (!savedImage) continue;
-
-    const asset = await prisma.mediaAsset.create({
-      data: {
-        filename: savedImage.relativePath,
-        originalName: savedImage.originalName,
-        mimeType: savedImage.mimeType,
-        sizeBytes: savedImage.sizeBytes,
-        url: "/api/media/pending",
-        altText: inlineImage.altText || postTitle,
-        uploadedById: userId
-      }
-    });
-
-    await prisma.mediaAsset.update({
-      where: { id: asset.id },
-      data: { url: `/api/media/${asset.id}` }
-    });
-
-    nextContent = nextContent.replaceAll(`post-image:${inlineImage.token}`, `/api/media/${asset.id}`);
-  }
-
-  return nextContent;
 }

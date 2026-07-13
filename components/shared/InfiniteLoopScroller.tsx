@@ -1,6 +1,7 @@
 "use client";
 
 import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import type { BuilderScrollDirection, BuilderScrollMode } from "@/modules/page-builder/page-builder.types";
 
 type InfiniteLoopScrollerProps = {
@@ -29,6 +30,7 @@ export function InfiniteLoopScroller({
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
   const offsetRef = useRef(0);
   const [currentOffset, setCurrentOffset] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [metrics, setMetrics] = useState({ offsets: [0], itemStep: 0, maxOffset: 0, loopSize: 0, viewportSize: 0, hasOverflow: false });
   const items = useMemo(() => Children.toArray(children).filter(Boolean), [children]);
   const isHorizontal = direction === "horizontal";
@@ -39,6 +41,14 @@ export function InfiniteLoopScroller({
   const arrowsVisible = isCarousel && metrics.hasOverflow && arrowsEnabled;
   const canMovePrevious = normalOffset > overflowTolerance;
   const canMoveNext = normalOffset < metrics.maxOffset - overflowTolerance;
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setPrefersReducedMotion(query.matches);
+    updatePreference();
+    query.addEventListener("change", updatePreference);
+    return () => query.removeEventListener("change", updatePreference);
+  }, []);
 
   useLayoutEffect(() => {
     function measure() {
@@ -93,7 +103,7 @@ export function InfiniteLoopScroller({
   }, [metrics.hasOverflow]);
 
   useEffect(() => {
-    if (!isInfinite) return;
+    if (!isInfinite || prefersReducedMotion) return;
     const track = trackRef.current;
     if (!track) return;
 
@@ -114,7 +124,7 @@ export function InfiniteLoopScroller({
 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [autoScroll, direction, isInfinite, metrics.loopSize, speed]);
+  }, [autoScroll, direction, isInfinite, metrics.loopSize, prefersReducedMotion, speed]);
 
   const transform = isInfinite ? undefined : getTransform(direction, normalOffset);
 
@@ -138,7 +148,13 @@ export function InfiniteLoopScroller({
       <div ref={viewportRef} className="block-infinite-scroll__viewport">
         <div ref={trackRef} className="block-infinite-scroll__track" style={{ transform }}>
           {Array.from({ length: isInfinite ? loopCopies : 1 }).map((_, copyIndex) => (
-            <div className="block-infinite-scroll__set" ref={copyIndex === 0 ? firstSetRef : undefined} key={copyIndex}>
+            <div
+              className="block-infinite-scroll__set"
+              ref={copyIndex === 0 ? firstSetRef : undefined}
+              aria-hidden={copyIndex === 0 ? undefined : true}
+              inert={copyIndex === 0 ? undefined : true}
+              key={copyIndex}
+            >
               {items.map((item, index) => (
                 <div
                   className="block-infinite-scroll__item"
@@ -164,7 +180,7 @@ export function InfiniteLoopScroller({
             disabled={!canMovePrevious}
             onClick={() => moveBy(-1)}
           >
-            {isHorizontal ? "<" : "^"}
+            {isHorizontal ? <ChevronLeft size={22} aria-hidden="true" /> : <ChevronUp size={22} aria-hidden="true" />}
           </button>
           <button
             className="block-carousel-arrow block-carousel-arrow--next"
@@ -173,7 +189,7 @@ export function InfiniteLoopScroller({
             disabled={!canMoveNext}
             onClick={() => moveBy(1)}
           >
-            {isHorizontal ? ">" : "v"}
+            {isHorizontal ? <ChevronRight size={22} aria-hidden="true" /> : <ChevronDown size={22} aria-hidden="true" />}
           </button>
         </div>
       ) : null}

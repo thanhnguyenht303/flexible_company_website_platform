@@ -6,7 +6,7 @@ import { getServerTranslations } from "@/lib/i18n/server";
 export default async function NewQaPage() {
   const { t } = await getServerTranslations();
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="qa.manage">
       <div className="admin-page-header">
         <h1>{t("formsFeature.qa.newQa")}</h1>
         <Link className="button secondary" href="/admin/qa">{t("formsFeature.common.back")}</Link>

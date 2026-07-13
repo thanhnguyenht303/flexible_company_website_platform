@@ -6,7 +6,7 @@ import { env } from "@/lib/env";
 import { savePrivateUploadFile } from "@/lib/file-storage";
 import { sendFormNotification } from "@/lib/mail";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { rejectOversizedRequest } from "@/lib/request-size";
+import { readRequestWithBodyLimit } from "@/lib/request-size";
 import { isSafePublicUrl } from "@/lib/safe-url";
 import { slugify } from "@/lib/slug";
 import { normalizeOptions } from "@/modules/forms/forms.service";
@@ -36,13 +36,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     return fail("RATE_LIMITED", `Too many submissions. Try again in ${rateLimit.retryAfterSeconds} seconds.`, 429);
   }
 
-  const oversized = rejectOversizedRequest(request, Math.max(env.MAX_FILE_UPLOAD_MB, env.MAX_UPLOAD_MB), "Form submission");
-  if (oversized) return oversized;
+  const limited = await readRequestWithBodyLimit(request, Math.max(env.MAX_FILE_UPLOAD_MB, env.MAX_UPLOAD_MB), "Form submission");
+  if ("response" in limited) return limited.response;
+  const limitedRequest = limited.request;
 
-  const contentType = request.headers.get("content-type") ?? "";
+  const contentType = limitedRequest.headers.get("content-type") ?? "";
   const formData = contentType.includes("multipart/form-data")
-    ? await request.formData()
-    : jsonToFormData(await request.json().catch(() => null));
+    ? await limitedRequest.formData()
+    : jsonToFormData(await limitedRequest.json().catch(() => null));
 
   if (stringField(formData.get("website")).trim()) {
     return fail("VALIDATION_ERROR", "Please check the submitted data.", 422);
@@ -120,6 +121,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     recipients: form.notificationEmails,
     subject: `New ${form.name} submission`,
     replyTo: lead.email,
+    relatedType: qaId ? "qaItem" : "formSubmission",
+    relatedId: qaId || submission.id,
+    templateKey: qaId ? "qa.question.received" : "form.submission.received",
+    variables: qaId ? {
+      senderName: lead.name || "Visitor",
+      questionTitle: pickValue(validation.values, ["questionTitle", "title", "subject"]) || "Submitted question",
+      question: pickValue(validation.values, ["question", "questionDetails", "details", "message"]) || "",
+      adminLink: `${env.NEXT_PUBLIC_SITE_URL}/admin/qa/${qaId}`
+    } : {
+      sourceForm: form.name,
+      submittedValues: Object.entries(validation.values).map(([key, value]) => `${key}: ${String(value)}`).join("\n"),
+      adminLink: `${env.NEXT_PUBLIC_SITE_URL}/admin/forms/${form.id}/submissions`
+    },
     lines: [
       `Form: ${form.name}`,
       `Lead: /admin/leads/${lead.id}`,

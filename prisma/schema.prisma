@@ -18,6 +18,14 @@ enum PublishStatus {
   ARCHIVED
 }
 
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  UNLISTED
+  ARCHIVED
+}
+
 enum InquiryStatus {
   NEW
   IN_PROGRESS
@@ -25,30 +33,83 @@ enum InquiryStatus {
   SPAM
 }
 
+enum JobApplicationStatus {
+  NEW
+  IN_PROGRESS
+  ACCEPTED
+  REJECTED
+  INTERVIEW
+  NEED_MORE_INFO
+  ARCHIVED
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum EmailStatus {
+  DRAFT
+  QUEUED
+  SENT
+  FAILED
+  RECEIVED
+  ARCHIVED
+}
+
 model User {
-  id           String       @id @default(cuid())
-  username     String       @unique
-  email        String?      @unique
-  passwordHash String
-  displayName  String?
-  status       UserStatus   @default(ACTIVE)
-  roleId       String
-  role         Role         @relation(fields: [roleId], references: [id])
-  lastLoginAt  DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  mediaUploads MediaAsset[]
-  auditLogs    AuditLog[]
+  id            String         @id @default(cuid())
+  username      String         @unique
+  email         String?        @unique
+  passwordHash  String
+  displayName   String?
+  status        UserStatus     @default(ACTIVE)
+  roleId        String
+  role          Role           @relation(fields: [roleId], references: [id])
+  lastLoginAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  mediaUploads  MediaAsset[]
+  posts         Post[]
+  postRevisions PostRevision[]
+  auditLogs     AuditLog[]
 }
 
 model Role {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String          @id @default(cuid())
+  name        String          @unique
+  slug        String          @unique
   description String?
   permissions Json
+  isSystem    Boolean         @default(false)
   users       User[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  authorities RoleAuthority[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Authority {
+  id          String          @id @default(cuid())
+  key         String          @unique
+  name        String
+  group       String?
+  description String?
+  menuPath    String?
+  isSystem    Boolean         @default(true)
+  roles       RoleAuthority[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model RoleAuthority {
+  id          String    @id @default(cuid())
+  roleId      String
+  authorityId String
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  authority   Authority @relation(fields: [authorityId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, authorityId])
+  @@index([authorityId])
 }
 
 model SiteSetting {
@@ -70,20 +131,20 @@ model SiteSetting {
 }
 
 model ThemeSetting {
-  id              String   @id @default(cuid())
-  primaryColor    String   @default("#2563EB")
-  secondaryColor  String   @default("#1E293B")
-  accentColor     String   @default("#F97316")
-  backgroundColor String   @default("#FFFFFF")
+  id                String   @id @default(cuid())
+  primaryColor      String   @default("#2563EB")
+  secondaryColor    String   @default("#1E293B")
+  accentColor       String   @default("#F97316")
+  backgroundColor   String   @default("#FFFFFF")
   backgroundImageId String?
-  textColor       String   @default("#111827")
-  fontFamily      String   @default("Inter")
-  borderRadius    String   @default("medium")
-  headerLayout    String   @default("classic")
-  footerLayout    String   @default("standard")
-  customCss       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  textColor         String   @default("#111827")
+  fontFamily        String   @default("Inter")
+  borderRadius      String   @default("medium")
+  headerLayout      String   @default("classic")
+  footerLayout      String   @default("standard")
+  customCss         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Page {
@@ -145,64 +206,64 @@ model Form {
 }
 
 model FormField {
-  id          String   @id @default(cuid())
-  formId      String
-  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
-  type        String
-  label       String
-  key         String
-  helpText    String?
-  placeholder String?
-  required    Boolean  @default(false)
-  options     Json?
-  validation  Json?
-  defaultValue String?
+  id            String   @id @default(cuid())
+  formId        String
+  form          Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  type          String
+  label         String
+  key           String
+  helpText      String?
+  placeholder   String?
+  required      Boolean  @default(false)
+  options       Json?
+  validation    Json?
+  defaultValue  String?
   internalLabel String?
-  sortOrder   Int      @default(0)
-  settings    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sortOrder     Int      @default(0)
+  settings      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([formId, key])
   @@index([formId, sortOrder])
 }
 
 model FormSubmission {
-  id          String   @id @default(cuid())
-  formId      String
-  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
-  values      Json
-  files       Json?
-  sourceType  String?
-  sourceId    String?
-  status      String   @default("NEW")
-  ipAddress   String?
-  userAgent   String?
-  leadId      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  formId     String
+  form       Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  values     Json
+  files      Json?
+  sourceType String?
+  sourceId   String?
+  status     String   @default("NEW")
+  ipAddress  String?
+  userAgent  String?
+  leadId     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([formId, createdAt])
   @@index([status, createdAt])
 }
 
 model Lead {
-  id            String   @id @default(cuid())
-  submissionId  String?
-  name          String?
-  email         String?
-  phone         String?
-  companyName   String?
-  sourceType    String   @default("form")
-  sourceId      String?
-  sourceFormId  String?
-  status        String   @default("NEW")
-  priority      String   @default("NORMAL")
-  assignedToId  String?
-  internalNote  String?
-  followUpAt    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String    @id @default(cuid())
+  submissionId String?
+  name         String?
+  email        String?
+  phone        String?
+  companyName  String?
+  sourceType   String    @default("form")
+  sourceId     String?
+  sourceFormId String?
+  status       String    @default("NEW")
+  priority     String    @default("NORMAL")
+  assignedToId String?
+  internalNote String?
+  followUpAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([status, createdAt])
   @@index([priority, createdAt])
@@ -211,16 +272,16 @@ model Lead {
 }
 
 model QaItem {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   title          String
-  slug           String   @unique
+  slug           String    @unique
   question       String
   answer         String?
   submitterName  String?
   submitterEmail String?
   category       String?
-  status         String   @default("NEW")
-  sourceType     String?  @default("qa")
+  status         String    @default("NEW")
+  sourceType     String?   @default("qa")
   sourceId       String?
   sourceFormId   String?
   submissionId   String?
@@ -228,8 +289,8 @@ model QaItem {
   relatedType    String?
   relatedId      String?
   publishedAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([status, publishedAt])
   @@index([category])
@@ -266,10 +327,10 @@ model Product {
 }
 
 model Service {
-  id             String        @id @default(cuid())
+  id             String          @id @default(cuid())
   name           String
   nameVi         String?
-  slug           String        @unique
+  slug           String          @unique
   summary        String?
   summaryVi      String?
   description    String?
@@ -277,11 +338,11 @@ model Service {
   categoryId     String?
   imageId        String?
   gallery        Json?
-  status         PublishStatus @default(DRAFT)
+  status         PublishStatus   @default(DRAFT)
   seoTitle       String?
   seoDescription String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   reviews        ServiceReview[]
 }
 
@@ -301,23 +362,55 @@ model ServiceReview {
 }
 
 model Post {
-  id              String        @id @default(cuid())
-  title           String
-  titleVi         String?
-  slug            String        @unique
-  excerpt         String?
-  excerptVi       String?
-  content         String
-  contentVi       String?
-  categoryId      String?
-  tagNames        String[]
-  featuredImageId String?
-  status          PublishStatus @default(DRAFT)
-  publishedAt     DateTime?
-  seoTitle        String?
-  seoDescription  String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id               String         @id @default(cuid())
+  title            String
+  titleVi          String?
+  slug             String         @unique
+  excerpt          String?
+  excerptVi        String?
+  content          String
+  contentVi        String?
+  contentJson      Json?
+  contentJsonVi    Json?
+  contentText      String?
+  contentVersion   Int            @default(2)
+  revisionNumber   Int            @default(0)
+  categoryId       String?
+  tagNames         String[]
+  featuredImageId  String?
+  featuredImageAlt String?
+  status           PostStatus     @default(DRAFT)
+  publishedAt      DateTime?
+  firstPublishedAt DateTime?
+  scheduledAt      DateTime?
+  seoTitle         String?
+  seoDescription   String?
+  canonicalUrl     String?
+  authorId         String?
+  author           User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  revisions        PostRevision[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([authorId, updatedAt])
+}
+
+model PostRevision {
+  id             String   @id @default(cuid())
+  postId         String
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  locale         String   @default("en")
+  revisionNumber Int
+  title          String
+  excerpt        String?
+  contentJson    Json
+  createdById    String?
+  createdBy      User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+
+  @@unique([postId, locale, revisionNumber])
+  @@index([postId, createdAt])
 }
 
 model TeamMember {
@@ -351,9 +444,9 @@ model FooterPartner {
 }
 
 model JobPosting {
-  id             String        @id @default(cuid())
+  id             String           @id @default(cuid())
   title          String
-  slug           String        @unique
+  slug           String           @unique
   summary        String?
   description    String
   requirements   String?
@@ -364,35 +457,35 @@ model JobPosting {
   salaryRange    String?
   applyEmail     String?
   applyUrl       String?
-  status         PublishStatus @default(DRAFT)
+  status         PublishStatus    @default(DRAFT)
   publishedAt    DateTime?
   applications   JobApplication[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([status, publishedAt])
 }
 
 model JobApplication {
-  id          String        @id @default(cuid())
-  jobId       String
-  job         JobPosting    @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  name        String
-  email       String
-  phone       String?
-  companyName String?
-  message     String?
+  id           String        @id @default(cuid())
+  jobId        String
+  job          JobPosting    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  name         String
+  email        String
+  phone        String?
+  companyName  String?
+  message      String?
   resumeFileId String?
-  resumeFile  FileAsset?    @relation(fields: [resumeFileId], references: [id])
-  status      InquiryStatus @default(NEW)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  resumeFile   FileAsset?    @relation(fields: [resumeFileId], references: [id])
+  status       JobApplicationStatus @default(NEW)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([jobId, createdAt])
 }
 
 model FileAsset {
-  id           String   @id @default(cuid())
+  id           String           @id @default(cuid())
   filename     String
   originalName String
   mimeType     String
@@ -400,7 +493,7 @@ model FileAsset {
   url          String
   category     String
   uploadedById String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime         @default(now())
   applications JobApplication[]
 }
 
@@ -446,4 +539,85 @@ model AuditLog {
   ipAddress  String?
   userAgent  String?
   createdAt  DateTime @default(now())
+}
+
+model EmailSettings {
+  id                        String   @id @default("default")
+  defaultReceivingEmail     String?
+  defaultSenderName         String?
+  defaultSenderEmail        String?
+  replyToEmail              String?
+  notificationEmails        String[] @default([])
+  ccEmails                  String[] @default([])
+  bccEmails                 String[] @default([])
+  emailNotificationsEnabled Boolean  @default(true)
+  smtpHost                  String?
+  smtpPort                  Int?
+  smtpUsername              String?
+  smtpPasswordEncrypted     String?
+  smtpSecure                Boolean  @default(false)
+  imapHost                  String?
+  imapPort                  Int?
+  imapUsername              String?
+  imapPasswordEncrypted     String?
+  imapSecure                Boolean  @default(true)
+  imapLastSyncAt            DateTime?
+  inboundEmailAddress       String?
+  inboundWebhookSecretEncrypted String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  key         String
+  category    String   @default("general")
+  language    String   @default("en")
+  subject     String
+  body        String
+  isActive    Boolean  @default(true)
+  variables   Json?
+  customVariables Json @default("[]")
+  messages    EmailMessage[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([key, language])
+  @@index([category, isActive])
+}
+
+model EmailMessage {
+  id                String         @id @default(cuid())
+  direction         EmailDirection
+  status            EmailStatus
+  fromEmail         String?
+  fromName          String?
+  toEmails          String[]       @default([])
+  ccEmails          String[]       @default([])
+  bccEmails         String[]       @default([])
+  replyToEmail      String?
+  subject           String
+  body              String
+  bodyHtml          String?
+  templateId        String?
+  template          EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  providerMessageId String?
+  inReplyTo         String?
+  referencesHeader  String?
+  relatedType       String?
+  relatedId         String?
+  sentByUserId      String?
+  errorMessage      String?
+  attachments       Json?
+  metadata          Json?
+  readAt            DateTime?
+  sentAt            DateTime?
+  receivedAt        DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([direction, status, createdAt])
+  @@index([relatedType, relatedId])
+  @@index([providerMessageId])
 }

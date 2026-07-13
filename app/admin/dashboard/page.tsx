@@ -11,8 +11,11 @@ import {
   Wrench
 } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
+import type { AuthorityKey } from "@/config/admin-authorities";
+import { requireAdminAuthority } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { hasAuthority } from "@/lib/permissions";
 import { badgeTone, formatDate, statusLabel } from "@/modules/forms/forms.labels";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +38,7 @@ type DashboardStat = {
   publicLabelKey: string;
   href: string;
   icon: keyof typeof statIcons;
+  authority: AuthorityKey;
 };
 
 type QaSnapshot = {
@@ -54,14 +58,14 @@ type QaSnapshot = {
 
 function emptyStats(): DashboardStat[] {
   return [
-    { labelKey: "admin.common.products", total: 0, publicCount: 0, publicLabelKey: "admin.common.published", href: "/admin/products", icon: "products" },
-    { labelKey: "admin.common.services", total: 0, publicCount: 0, publicLabelKey: "admin.common.published", href: "/admin/services", icon: "services" },
-    { labelKey: "admin.common.posts", total: 0, publicCount: 0, publicLabelKey: "admin.common.published", href: "/admin/posts", icon: "posts" },
-    { labelKey: "admin.common.team", total: 0, publicCount: 0, publicLabelKey: "admin.common.visible", href: "/admin/team", icon: "team" },
-    { labelKey: "admin.common.inquiries", total: 0, publicCount: null, publicLabelKey: "", href: "/admin/inquiries", icon: "inquiries" },
-    { labelKey: "formsFeature.forms.title", total: 0, publicCount: 0, publicLabelKey: "admin.common.published", href: "/admin/forms", icon: "forms" },
-    { labelKey: "formsFeature.leads.title", total: 0, publicCount: null, publicLabelKey: "", href: "/admin/leads", icon: "leads" },
-    { labelKey: "formsFeature.qa.title", total: 0, publicCount: 0, publicLabelKey: "formsFeature.status.PUBLISHED", href: "/admin/qa", icon: "qa" }
+    { labelKey: "admin.common.products", total: 0, publicCount: 0, publicLabelKey: "admin.common.published", href: "/admin/products", icon: "products", authority: "products.manage" },
+    { labelKey: "admin.common.services", total: 0, publicCount: 0, publicLabelKey: "admin.common.published", href: "/admin/services", icon: "services", authority: "services.manage" },
+    { labelKey: "admin.common.posts", total: 0, publicCount: 0, publicLabelKey: "admin.common.published", href: "/admin/posts", icon: "posts", authority: "posts.manage" },
+    { labelKey: "admin.common.team", total: 0, publicCount: 0, publicLabelKey: "admin.common.visible", href: "/admin/team", icon: "team", authority: "team.manage" },
+    { labelKey: "admin.common.inquiries", total: 0, publicCount: null, publicLabelKey: "", href: "/admin/inquiries", icon: "inquiries", authority: "inquiries.manage" },
+    { labelKey: "formsFeature.forms.title", total: 0, publicCount: 0, publicLabelKey: "admin.common.published", href: "/admin/forms", icon: "forms", authority: "forms.manage" },
+    { labelKey: "formsFeature.leads.title", total: 0, publicCount: null, publicLabelKey: "", href: "/admin/leads", icon: "leads", authority: "leads.manage" },
+    { labelKey: "formsFeature.qa.title", total: 0, publicCount: 0, publicLabelKey: "formsFeature.status.PUBLISHED", href: "/admin/qa", icon: "qa", authority: "qa.manage" }
   ];
 }
 
@@ -130,14 +134,14 @@ async function getDashboardData(): Promise<{ stats: DashboardStat[]; qa: QaSnaps
 
     return {
       stats: [
-        { labelKey: "admin.common.products", total: products, publicCount: publishedProducts, publicLabelKey: "admin.common.published", href: "/admin/products", icon: "products" },
-        { labelKey: "admin.common.services", total: services, publicCount: publishedServices, publicLabelKey: "admin.common.published", href: "/admin/services", icon: "services" },
-        { labelKey: "admin.common.posts", total: posts, publicCount: publishedPosts, publicLabelKey: "admin.common.published", href: "/admin/posts", icon: "posts" },
-        { labelKey: "admin.common.team", total: team, publicCount: visibleTeam, publicLabelKey: "admin.common.visible", href: "/admin/team", icon: "team" },
-        { labelKey: "admin.common.inquiries", total: inquiries, publicCount: null, publicLabelKey: "", href: "/admin/inquiries", icon: "inquiries" },
-        { labelKey: "formsFeature.forms.title", total: forms, publicCount: publishedForms, publicLabelKey: "admin.common.published", href: "/admin/forms", icon: "forms" },
-        { labelKey: "formsFeature.leads.title", total: leads, publicCount: null, publicLabelKey: "", href: "/admin/leads", icon: "leads" },
-        { labelKey: "formsFeature.qa.title", total: qaTotal, publicCount: qaPublished, publicLabelKey: "formsFeature.status.PUBLISHED", href: "/admin/qa", icon: "qa" }
+        { labelKey: "admin.common.products", total: products, publicCount: publishedProducts, publicLabelKey: "admin.common.published", href: "/admin/products", icon: "products", authority: "products.manage" },
+        { labelKey: "admin.common.services", total: services, publicCount: publishedServices, publicLabelKey: "admin.common.published", href: "/admin/services", icon: "services", authority: "services.manage" },
+        { labelKey: "admin.common.posts", total: posts, publicCount: publishedPosts, publicLabelKey: "admin.common.published", href: "/admin/posts", icon: "posts", authority: "posts.manage" },
+        { labelKey: "admin.common.team", total: team, publicCount: visibleTeam, publicLabelKey: "admin.common.visible", href: "/admin/team", icon: "team", authority: "team.manage" },
+        { labelKey: "admin.common.inquiries", total: inquiries, publicCount: null, publicLabelKey: "", href: "/admin/inquiries", icon: "inquiries", authority: "inquiries.manage" },
+        { labelKey: "formsFeature.forms.title", total: forms, publicCount: publishedForms, publicLabelKey: "admin.common.published", href: "/admin/forms", icon: "forms", authority: "forms.manage" },
+        { labelKey: "formsFeature.leads.title", total: leads, publicCount: null, publicLabelKey: "", href: "/admin/leads", icon: "leads", authority: "leads.manage" },
+        { labelKey: "formsFeature.qa.title", total: qaTotal, publicCount: qaPublished, publicLabelKey: "formsFeature.status.PUBLISHED", href: "/admin/qa", icon: "qa", authority: "qa.manage" }
       ],
       qa: {
         total: qaTotal,
@@ -160,11 +164,19 @@ async function getDashboardData(): Promise<{ stats: DashboardStat[]; qa: QaSnaps
 }
 
 export default async function AdminDashboardPage() {
-  const [{ stats, qa }, { language, t }] = await Promise.all([getDashboardData(), getServerTranslations()]);
+  const [user, { stats, qa }, { language, t }] = await Promise.all([
+    requireAdminAuthority("dashboard.view"),
+    getDashboardData(),
+    getServerTranslations()
+  ]);
+  const visibleStats = stats.filter((item) => hasAuthority(user, item.authority));
+  const canManagePages = hasAuthority(user, "pages.manage");
+  const canManageForms = hasAuthority(user, "forms.manage");
+  const canManageQa = hasAuthority(user, "qa.manage");
   const answerRate = qa.total ? Math.round((qa.answered / qa.total) * 100) : 0;
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="dashboard.view">
       <div className="dashboard-page">
         <section className="dashboard-hero" aria-labelledby="dashboard-title">
           <div>
@@ -172,14 +184,12 @@ export default async function AdminDashboardPage() {
             <h1 id="dashboard-title">{t("admin.common.dashboard")}</h1>
             <p>{t("admin.dashboard.subtitle")}</p>
           </div>
-          <div className="dashboard-hero__actions">
-            <Link className="button secondary" href="/admin/pages">
-              {t("admin.common.editHomepage")}
-            </Link>
-            <Link className="button" href="/admin/qa">
-              {t("admin.dashboard.openQa")}
-            </Link>
-          </div>
+          {canManagePages || canManageQa ? (
+            <div className="dashboard-hero__actions">
+              {canManagePages ? <Link className="button secondary" href="/admin/pages">{t("admin.common.editHomepage")}</Link> : null}
+              {canManageQa ? <Link className="button" href="/admin/qa">{t("admin.dashboard.openQa")}</Link> : null}
+            </div>
+          ) : null}
         </section>
 
         <section aria-labelledby="dashboard-content-title">
@@ -190,7 +200,7 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
           <div className="dashboard-stat-grid">
-            {stats.map((item) => {
+            {visibleStats.map((item) => {
               const Icon = statIcons[item.icon];
 
               return (
@@ -216,16 +226,14 @@ export default async function AdminDashboardPage() {
           </div>
         </section>
 
-        <section className="dashboard-qa-panel" aria-labelledby="dashboard-qa-title">
+        {canManageQa ? <section className="dashboard-qa-panel" aria-labelledby="dashboard-qa-title">
           <div className="dashboard-qa-main">
             <div className="dashboard-section-header">
               <div>
                 <h2 id="dashboard-qa-title">{t("admin.dashboard.qaWorkspace")}</h2>
                 <p>{t("admin.dashboard.qaDescription")}</p>
               </div>
-              <Link className="button secondary" href="/admin/forms">
-                {t("admin.dashboard.viewForms")}
-              </Link>
+              {canManageForms ? <Link className="button secondary" href="/admin/forms">{t("admin.dashboard.viewForms")}</Link> : null}
             </div>
             <div className="dashboard-qa-metrics">
               <div className="dashboard-qa-metric">
@@ -291,7 +299,7 @@ export default async function AdminDashboardPage() {
               ) : null}
             </div>
           </aside>
-        </section>
+        </section> : null}
       </div>
     </AdminShell>
   );

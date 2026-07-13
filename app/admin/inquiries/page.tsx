@@ -14,7 +14,7 @@ export default async function AdminInquiriesPage() {
   const [inquiries, { t }] = await Promise.all([getInquiries(), getServerTranslations()]);
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="inquiries.manage">
       <div className="admin-page-header">
         <h1>{t("admin.common.inquiries")}</h1>
       </div>
@@ -22,10 +22,11 @@ export default async function AdminInquiriesPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>{t("admin.common.name")}</th>
-              <th>{t("admin.common.email")}</th>
-              <th>{t("admin.common.status")}</th>
-              <th>{t("admin.common.created")}</th>
+              <th scope="col">{t("admin.common.name")}</th>
+              <th scope="col">{t("admin.common.email")}</th>
+              <th scope="col">{t("admin.common.status")}</th>
+              <th scope="col">{t("admin.common.created")}</th>
+              <th scope="col">{t("admin.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -37,11 +38,12 @@ export default async function AdminInquiriesPage() {
                   <span className="badge">{t(`admin.status.${inquiry.status}`)}</span>
                 </td>
                 <td>{inquiry.createdAt.toLocaleDateString()}</td>
+                <td><a className="button secondary" href={`/admin/inquiries/${inquiry.id}`}>{t("admin.common.edit")}</a></td>
               </tr>
             ))}
             {inquiries.length === 0 ? (
               <tr>
-                <td colSpan={4}>{t("admin.empty.inquiries")}</td>
+                <td colSpan={5}>{t("admin.empty.inquiries")}</td>
               </tr>
             ) : null}
           </tbody>

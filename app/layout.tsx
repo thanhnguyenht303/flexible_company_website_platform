@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { getCurrentLanguage } from "@/lib/i18n/server";
 import { getThemeStyle, getPublicSiteContext } from "@/lib/public-data";
@@ -22,6 +22,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+export async function generateViewport(): Promise<Viewport> {
+  const { theme } = await getPublicSiteContext();
+
+  return {
+    colorScheme: "only light",
+    themeColor: theme.backgroundColor
+  };
+}
+
 export default async function RootLayout({
   children
 }: Readonly<{
@@ -30,7 +39,7 @@ export default async function RootLayout({
   const [themeStyle, language] = await Promise.all([getThemeStyle(), getCurrentLanguage()]);
 
   return (
-    <html lang={language}>
+    <html lang={language} style={themeStyle}>
       <body style={themeStyle}>{children}</body>
     </html>
   );

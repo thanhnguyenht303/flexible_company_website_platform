@@ -5,12 +5,15 @@ import { LeadEditForm } from "@/components/admin/LeadEditForm";
 import { prisma } from "@/lib/db";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { badgeTone, firstStringValue, formatDateTime, priorityLabel, statusLabel, valueEntries } from "@/modules/forms/forms.labels";
+import { EmailComposeForm } from "@/components/admin/email/EmailComposeForm";
+import { getAdminUser } from "@/lib/auth";
+import { hasAuthority } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [{ language, t }, lead] = await Promise.all([getServerTranslations(), prisma.lead.findUnique({ where: { id } })]);
+  const [{ language, t }, lead, user] = await Promise.all([getServerTranslations(), prisma.lead.findUnique({ where: { id } }), getAdminUser()]);
   if (!lead) notFound();
 
   const [submission, form, qaItem] = await Promise.all([
@@ -18,9 +21,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     lead.sourceFormId ? prisma.form.findUnique({ where: { id: lead.sourceFormId }, select: { id: true, name: true, slug: true } }) : null,
     prisma.qaItem.findFirst({ where: { leadId: lead.id } })
   ]);
+  const canEmail = hasAuthority(user, "email.manage");
+  const templates = canEmail ? await prisma.emailTemplate.findMany({ where: { isActive: true, category: { in: ["lead", "form", "general"] } }, orderBy: { name: "asc" }, select: { id: true, name: true, key: true, subject: true, body: true, category: true, customVariables: true } }) : [];
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="leads.manage">
       <div className="admin-page-header">
         <div>
           <h1>{lead.name || lead.email || "Lead"}</h1>
@@ -76,6 +81,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           </dl>
         </section>
       ) : null}
+      {canEmail && lead.email ? <section><h2>{t("admin.email.compose")}</h2><EmailComposeForm initialTo={lead.email} templates={templates} relatedType="lead" relatedId={lead.id} variables={{ leadName: lead.name || "", leadEmail: lead.email, leadPhone: lead.phone || "", companyName: lead.companyName || "", sourceForm: form?.name || lead.sourceType }} /></section> : null}
     </AdminShell>
   );
 }

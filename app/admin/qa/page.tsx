@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { QaThemeSettingsForm } from "@/components/admin/QaThemeSettingsForm";
 import { prisma } from "@/lib/db";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { getQaThemeFromSite } from "@/lib/qa-theme";
 import { badgeTone, formatDate, statusLabel } from "@/modules/forms/forms.labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminQaPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; category?: string }> }) {
   const [{ language, t }, params] = await Promise.all([getServerTranslations(), searchParams]);
-  const [items, categories] = await Promise.all([
+  const [items, categories, site] = await Promise.all([
     prisma.qaItem.findMany({
     where: {
       ...(params.status ? { status: params.status } : {}),
@@ -27,11 +29,13 @@ export default async function AdminQaPage({ searchParams }: { searchParams: Prom
     orderBy: { createdAt: "desc" },
     take: 500
     }),
-    prisma.qaItem.findMany({ where: { category: { not: null } }, distinct: ["category"], select: { category: true }, orderBy: { category: "asc" } })
+    prisma.qaItem.findMany({ where: { category: { not: null } }, distinct: ["category"], select: { category: true }, orderBy: { category: "asc" } }),
+    prisma.siteSetting.findFirst({ select: { defaultSeo: true } })
   ]);
+  const qaTheme = getQaThemeFromSite(site ?? {});
 
   return (
-    <AdminShell>
+    <AdminShell requiredAuthority="qa.manage">
       <div className="admin-page-header">
         <div>
           <h1>{t("formsFeature.qa.title")}</h1>
@@ -41,6 +45,7 @@ export default async function AdminQaPage({ searchParams }: { searchParams: Prom
           {t("formsFeature.qa.newQa")}
         </Link>
       </div>
+      <QaThemeSettingsForm theme={qaTheme} />
       <form className="admin-panel feature-filter-bar">
         <div className="field">
           <label htmlFor="q">{t("formsFeature.common.search")}</label>
@@ -71,13 +76,13 @@ export default async function AdminQaPage({ searchParams }: { searchParams: Prom
         <table className="table">
           <thead>
             <tr>
-              <th>{t("formsFeature.qa.questionTitle")}</th>
-              <th>{t("formsFeature.qa.submitter")}</th>
-              <th>{t("formsFeature.common.category")}</th>
-              <th>{t("formsFeature.common.status")}</th>
-              <th>{t("formsFeature.common.created")}</th>
-              <th>{t("formsFeature.common.publicPage")}</th>
-              <th>{t("formsFeature.common.actions")}</th>
+              <th scope="col">{t("formsFeature.qa.questionTitle")}</th>
+              <th scope="col">{t("formsFeature.qa.submitter")}</th>
+              <th scope="col">{t("formsFeature.common.category")}</th>
+              <th scope="col">{t("formsFeature.common.status")}</th>
+              <th scope="col">{t("formsFeature.common.created")}</th>
+              <th scope="col">{t("formsFeature.common.publicPage")}</th>
+              <th scope="col">{t("formsFeature.common.actions")}</th>
             </tr>
           </thead>
           <tbody>

@@ -2,26 +2,20 @@ import { PrismaClient, PublishStatus } from "@prisma/client";
 import { defaultHomeSections, defaultPosts, defaultProducts, defaultServices, defaultSite, defaultTeam } from "../config/default-site";
 import { publicPages } from "../config/public-pages";
 import { defaultTheme } from "../config/default-theme";
-import { superAdminPermissions } from "../lib/permissions";
+import { syncAuthorities } from "../lib/authority-sync";
+import { defaultEmailTemplates } from "../modules/email/email.defaults";
+import { getTemplateVariables } from "../modules/email/email.variables";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  await prisma.role.upsert({
-    where: { name: "Super Admin" },
-    update: { permissions: superAdminPermissions },
-    create: {
-      name: "Super Admin",
-      description: "Full system access",
-      permissions: superAdminPermissions
-    }
-  });
+  await syncAuthorities(prisma);
 
   await prisma.role.upsert({
     where: { name: "Editor" },
-    update: {},
     create: {
       name: "Editor",
+      slug: "editor",
       description: "Content editor access",
       permissions: {
         "products.manage": true,
@@ -36,8 +30,11 @@ async function main() {
         "leads.manage": true,
         "qa.manage": true
       }
-    }
+    },
+    update: { slug: "editor" }
   });
+
+  await syncAuthorities(prisma);
 
   if (!(await prisma.siteSetting.findFirst())) {
     await prisma.siteSetting.create({ data: defaultSite });
@@ -133,6 +130,28 @@ async function main() {
   }
 
   await seedAskQuestionForm();
+  await seedEmailCenter();
+}
+
+async function seedEmailCenter() {
+  await prisma.emailSettings.upsert({ where: { id: "default" }, update: {}, create: { id: "default" } });
+  for (const template of defaultEmailTemplates) {
+    await prisma.emailTemplate.upsert({
+      where: { key_language: { key: template.key, language: template.language } },
+      update: { variables: getTemplateVariables(template.category).map((item) => item.key) },
+      create: {
+        ...template,
+        variables: getTemplateVariables(template.category).map((item) => item.key)
+      }
+    });
+  }
+  const templates = await prisma.emailTemplate.findMany({ select: { id: true, category: true } });
+  for (const template of templates) {
+    await prisma.emailTemplate.update({
+      where: { id: template.id },
+      data: { variables: getTemplateVariables(template.category).map((item) => item.key) }
+    });
+  }
 }
 
 async function seedAskQuestionForm() {
